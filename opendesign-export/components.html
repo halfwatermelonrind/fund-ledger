@@ -1,0 +1,507 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>组件库 — 基金交易账簿</title>
+  <style>
+    :root {
+      --bg:      #f3f4f6;
+      --surface: #ffffff;
+      --fg:      #111827;
+      --muted:   #6b7280;
+      --border:  #e5e7eb;
+      --accent:  #1e3a8a;
+      --accent-light: #dbeafe;
+      --gain:    #dc2626;
+      --gain-bg: #fef2f2;
+      --loss:    #16a34a;
+      --loss-bg: #f0fdf4;
+      --warn:    #f59e0b;
+      --warn-bg: #fffbeb;
+      --flat:    #9ca3af;
+      --flat-bg: #f9fafb;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --font-display: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+      --font-body:    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+      --font-mono:    'SF Mono', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, 'Menlo', 'Consolas', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--fg);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+    .page-header {
+      background: var(--accent);
+      color: #fff;
+      padding: clamp(16px, 3vw, 28px) clamp(16px, 4vw, 40px);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .page-header h1 { font-size: clamp(18px, 2.2vw, 22px); font-weight: 600; letter-spacing: 0.01em; }
+    .page-header a { color: rgba(255,255,255,0.8); font-size: 13px; text-decoration: none; }
+    .page-header a:hover { color: #fff; }
+    .container { max-width: 960px; margin: 0 auto; padding: clamp(16px, 3vw, 32px); }
+
+    /* Section */
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 18px; font-weight: 600; letter-spacing: 0.01em;
+      margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-desc { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+
+    /* Component grid */
+    .comp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .comp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+    }
+    .comp-card.full { grid-column: 1 / -1; }
+    .comp-name {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 12px;
+    }
+    .comp-demo {
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+
+    /* ---- Reusable component styles (same as main app) ---- */
+    .form-group { margin-bottom: 14px; flex: 1; min-width: 160px; }
+    .form-label { display: block; font-size: 13px; font-weight: 500; color: var(--fg); margin-bottom: 4px; letter-spacing: 0.01em; }
+    .form-label .optional { color: var(--muted); font-weight: 400; font-size: 12px; }
+    .form-input, .form-select {
+      width: 100%; height: 40px; padding: 0 12px; font-size: 14px;
+      font-family: var(--font-body); color: var(--fg);
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+      transition: border-color 0.15s, box-shadow 0.15s; -webkit-appearance: none;
+    }
+    .form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,58,138,0.1); }
+    .form-input.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .form-select {
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
+      padding-right: 36px;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      height: 40px; padding: 0 20px; font-size: 14px; font-weight: 500;
+      letter-spacing: 0.02em; border: 1px solid transparent; border-radius: var(--radius-sm);
+      cursor: pointer; transition: all 0.15s; gap: 6px; white-space: nowrap;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface); color: var(--fg); border-color: var(--border); }
+    .btn-ghost { background: transparent; color: var(--accent); border-color: transparent; }
+    .btn-danger { background: transparent; color: var(--gain); border-color: var(--gain); }
+    .btn-warn { background: var(--warn); color: #fff; border-color: var(--warn); }
+    .btn-sm { height: 32px; padding: 0 12px; font-size: 12px; }
+    .btn-xs { height: 28px; padding: 0 8px; font-size: 11px; border-radius: var(--radius-sm); }
+
+    .badge {
+      display: inline-flex; align-items: center; padding: 2px 8px;
+      font-size: 11px; font-weight: 500; letter-spacing: 0.02em;
+      border-radius: 999px; white-space: nowrap; line-height: 1.6;
+    }
+    .badge-confirmed { background: var(--accent-light); color: var(--accent); }
+    .badge-pending   { background: var(--warn-bg); color: #92400e; }
+    .badge-cleared   { background: var(--flat-bg); color: var(--flat); }
+
+    .pnl-up   { color: var(--gain); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .pnl-down { color: var(--loss); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .pnl-zero { color: var(--flat); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    /* Type tabs */
+    .type-tabs {
+      display: flex; gap: 4px; background: var(--bg);
+      border-radius: var(--radius-md); padding: 4px; width: 100%;
+    }
+    .type-tab {
+      flex: 1; padding: 8px 6px; font-size: 13px; font-weight: 500;
+      letter-spacing: 0.02em; text-align: center; border: none; border-radius: 6px;
+      background: transparent; color: var(--muted); cursor: pointer; transition: all 0.15s;
+    }
+    .type-tab.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow-sm); }
+
+    /* Filter pills */
+    .filter-pill {
+      padding: 4px 12px; font-size: 12px; font-weight: 500; letter-spacing: 0.02em;
+      border: 1px solid var(--border); border-radius: 999px;
+      background: var(--surface); color: var(--muted); cursor: pointer; transition: all 0.15s;
+    }
+    .filter-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* Refresh */
+    .refresh-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 50%;
+      background: var(--surface); cursor: pointer; font-size: 14px; color: var(--muted);
+      transition: all 0.15s;
+    }
+    .refresh-btn.spinning { animation: spin 0.8s linear; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Bottom tab bar */
+    .bbar {
+      display: flex; background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-md); overflow: hidden;
+    }
+    .bbar-tab {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 10px 4px; gap: 3px; border: none; background: none; color: var(--muted);
+      font-size: 11px; font-weight: 500; letter-spacing: 0.02em; cursor: pointer;
+    }
+    .bbar-tab.active { color: var(--accent); }
+    .bbar-tab svg { width: 22px; height: 22px; }
+
+    /* Toast demo */
+    .toast-demo {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast-item {
+      display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+      background: var(--fg); color: #fff; border-radius: var(--radius-md);
+      font-size: 13px; font-weight: 500;
+    }
+    .toast-item.success { border-left: 3px solid var(--loss); }
+    .toast-item.error   { border-left: 3px solid var(--gain); }
+    .toast-item.info    { border-left: 3px solid var(--accent); }
+
+    /* Summary mini */
+    .sum-grid-mini {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .sum-item-mini {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px; text-align: center;
+    }
+    .sum-item-mini .lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.04em; }
+    .sum-item-mini .val { font-family: var(--font-mono); font-size: 14px; font-weight: 600; margin-top: 2px; }
+
+    /* Table mini */
+    .table-mini { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .table-mini th { background: var(--bg); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; color: var(--muted); text-align: left; padding: 6px 10px; border-bottom: 2px solid var(--border); }
+    .table-mini td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+    .table-mini tr:last-child td { border-bottom: none; }
+    .table-mini .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    /* Modal mini */
+    .modal-mini {
+      background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 20px; box-shadow: var(--shadow-md);
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <a href="index.html">← 返回应用</a>
+    <h1>组件库</h1>
+  </header>
+
+  <div class="container">
+
+    <!-- 1. Form Elements -->
+    <div class="section">
+      <div class="section-title">01 表单元素</div>
+      <div class="section-desc">文本输入 · 数字输入（等宽） · 日期选择器 · 下拉选择 · 文本域</div>
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-name">文本输入</div>
+          <div class="comp-demo">
+            <div class="form-group"><label class="form-label">基金代码</label><input class="form-input mono" value="005827" /></div>
+            <div class="form-group"><label class="form-label">基金名称</label><input class="form-input" value="易方达蓝筹精选混合" readonly /></div>
+          </div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">数字输入（等宽 / 可选）</div>
+          <div class="comp-demo">
+            <div class="form-group"><label class="form-label">单位净值 <span class="optional">（可选）</span></label><input class="form-input mono" type="number" step="0.0001" placeholder="未知可留空，后续自动回填" /></div>
+            <div class="form-group"><label class="form-label">购买金额（元）</label><input class="form-input mono" type="number" step="0.01" value="10000" /></div>
+          </div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">日期选择器</div>
+          <div class="comp-demo"><div class="form-group"><label class="form-label">交易日期</label><input class="form-input" type="date" value="2026-06-20" /></div></div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">下拉选择</div>
+          <div class="comp-demo">
+            <div class="form-group">
+              <label class="form-label">代销渠道</label>
+              <select class="form-select"><option>支付宝</option><option>天天基金</option><option>银行</option><option>券商</option><option>其他</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Buttons -->
+    <div class="section">
+      <div class="section-title">02 按钮</div>
+      <div class="section-desc">主按钮 · 次按钮 · 幽灵按钮 · 危险按钮 · 警告按钮 · 小尺寸</div>
+      <div class="comp-grid">
+        <div class="comp-card full">
+          <div class="comp-name">标准尺寸</div>
+          <div class="comp-demo">
+            <button class="btn btn-primary">保存录入</button>
+            <button class="btn btn-secondary">重置</button>
+            <button class="btn btn-ghost">编辑</button>
+            <button class="btn btn-warn">一键回填净值</button>
+            <button class="btn btn-danger">删除</button>
+          </div>
+        </div>
+        <div class="comp-card full">
+          <div class="comp-name">小尺寸 (btn-sm / btn-xs)</div>
+          <div class="comp-demo">
+            <button class="btn btn-primary btn-sm">刷新全部估值</button>
+            <button class="btn btn-ghost btn-sm">详情</button>
+            <button class="btn btn-xs btn-ghost">回填</button>
+            <button class="btn btn-xs btn-danger">删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Transaction Type Tabs -->
+    <div class="section">
+      <div class="section-title">03 交易类型 Tab</div>
+      <div class="section-desc">四态切换：买入 / 卖出 / 现金分红 / 红利再投资</div>
+      <div class="comp-grid">
+        <div class="comp-card full">
+          <div class="comp-name">激活态：买入</div>
+          <div class="type-tabs">
+            <button class="type-tab active">买入</button>
+            <button class="type-tab">卖出</button>
+            <button class="type-tab">现金分红</button>
+            <button class="type-tab">红利再投资</button>
+          </div>
+        </div>
+        <div class="comp-card full">
+          <div class="comp-name">激活态：卖出</div>
+          <div class="type-tabs">
+            <button class="type-tab">买入</button>
+            <button class="type-tab active">卖出</button>
+            <button class="type-tab">现金分红</button>
+            <button class="type-tab">红利再投资</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Status Badges -->
+    <div class="section">
+      <div class="section-title">04 状态标签</div>
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-name">已确认</div>
+          <div class="comp-demo"><span class="badge badge-confirmed">已确认</span></div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">待回填</div>
+          <div class="comp-demo"><span class="badge badge-pending">待回填</span></div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">已清仓</div>
+          <div class="comp-demo"><span class="badge badge-cleared">已清仓</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Filter Pills -->
+    <div class="section">
+      <div class="section-title">05 过滤胶囊</div>
+      <div class="comp-grid">
+        <div class="comp-card full">
+          <div class="comp-name">状态筛选组</div>
+          <div class="comp-demo">
+            <button class="filter-pill active">全部</button>
+            <button class="filter-pill">已确认</button>
+            <button class="filter-pill">待回填</button>
+            <button class="filter-pill">已清仓</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. A-share P&L Colors -->
+    <div class="section">
+      <div class="section-title">06 盈亏涨跌色（A 股惯例）</div>
+      <div class="section-desc">上涨/盈利 = 红色 · 下跌/亏损 = 绿色 · 零/持平 = 灰色（与国际相反）</div>
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-name">涨 / 盈利</div>
+          <div class="comp-demo"><span class="pnl-up">+2,520.37 元</span></div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">跌 / 亏损</div>
+          <div class="comp-demo"><span class="pnl-down">−346.85 元</span></div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">持平 / 零</div>
+          <div class="comp-demo"><span class="pnl-zero">0.00 元</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Data Table -->
+    <div class="section">
+      <div class="section-title">07 数据表格</div>
+      <div class="section-desc">密集数据表 · 可排序表头 · 等宽数字列 · 行状态（正常 / 已清仓灰色）· 行内操作</div>
+      <div class="comp-card full">
+        <div class="comp-name">交易流水表（含状态标签和行操作）</div>
+        <table class="table-mini">
+          <thead><tr><th>日期</th><th>基金</th><th>类型</th><th>金额/份额</th><th>净值</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>2026-06-18</td><td>易方达蓝筹精选混合</td><td style="color:var(--accent);font-weight:500">买入</td><td class="mono">10,000.00 元</td><td class="mono">2.3456</td><td><span class="badge badge-confirmed">已确认</span></td>
+              <td><button class="btn btn-xs btn-ghost">编辑</button> <button class="btn btn-xs btn-danger">删除</button></td>
+            </tr>
+            <tr>
+              <td>2026-06-15</td><td>中欧医疗健康混合A</td><td style="color:var(--accent);font-weight:500">买入</td><td class="mono">5,000.00 元</td><td class="mono" style="color:var(--warn)">—</td><td><span class="badge badge-pending">待回填</span></td>
+              <td><button class="btn btn-xs btn-ghost">回填</button> <button class="btn btn-xs btn-danger">删除</button></td>
+            </tr>
+            <tr style="background:var(--flat-bg);color:var(--muted)">
+              <td>2026-05-20</td><td>南方中证500ETF联接A</td><td style="color:var(--loss);font-weight:500">卖出</td><td class="mono">5,000.00 份</td><td class="mono">1.4560</td><td><span class="badge badge-cleared">已清仓</span></td>
+              <td><button class="btn btn-xs btn-danger">删除</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 8. Summary Cards -->
+    <div class="section">
+      <div class="section-title">08 汇总卡片</div>
+      <div class="section-desc">7 项关键指标，盈亏色根据 A 股惯例着色</div>
+      <div class="comp-card full">
+        <div class="sum-grid-mini">
+          <div class="sum-item-mini"><div class="lbl">总市值</div><div class="val" style="color:var(--fg)">18,646.72</div></div>
+          <div class="sum-item-mini"><div class="lbl">总成本</div><div class="val" style="color:var(--fg)">29,445.00</div></div>
+          <div class="sum-item-mini"><div class="lbl">总浮动盈亏</div><div class="val pnl-up">+646.72</div></div>
+          <div class="sum-item-mini"><div class="lbl">总已实现盈亏</div><div class="val pnl-down">−346.85</div></div>
+          <div class="sum-item-mini"><div class="lbl">累计分红</div><div class="val" style="font-family:var(--font-mono);color:var(--warn)">+1,000.50</div></div>
+          <div class="sum-item-mini"><div class="lbl">总盈亏</div><div class="val pnl-up">+1,300.37</div></div>
+          <div class="sum-item-mini"><div class="lbl">总盈亏率</div><div class="val pnl-up">+4.42%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. Toast -->
+    <div class="section">
+      <div class="section-title">09 Toast 通知</div>
+      <div class="section-desc">成功 · 错误 · 信息 — 右上角滑入，2.5 秒后自动消失</div>
+      <div class="comp-grid">
+        <div class="comp-card full">
+          <div class="toast-demo">
+            <div class="toast-item success">交易录入成功</div>
+            <div class="toast-item info">交易录入成功，净值待回填</div>
+            <div class="toast-item error">卖出份额超出当前可用持仓</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10. Modal -->
+    <div class="section">
+      <div class="section-title">10 Modal 对话框</div>
+      <div class="section-desc">二次确认 + 表单输入型</div>
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-name">删除确认</div>
+          <div class="modal-mini">
+            <div style="font-size:16px;font-weight:600;margin-bottom:8px">确认删除</div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:16px">确定要删除这条交易记录吗？此操作不可撤销。</div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn btn-secondary btn-sm">取消</button>
+              <button class="btn btn-danger btn-sm">确认删除</button>
+            </div>
+          </div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">净值回填</div>
+          <div class="modal-mini">
+            <div style="font-size:16px;font-weight:600;margin-bottom:8px">手动回填净值</div>
+            <div class="form-group"><label class="form-label">基金：易方达蓝筹精选混合</label></div>
+            <div class="form-group"><label class="form-label">交易日期：2026-06-15</label></div>
+            <div class="form-group"><label class="form-label">单位净值</label><input class="form-input mono" type="number" step="0.0001" placeholder="输入净值" /></div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn btn-secondary btn-sm">取消</button>
+              <button class="btn btn-primary btn-sm">确认回填</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 11. Bottom TabBar -->
+    <div class="section">
+      <div class="section-title">11 底部 TabBar（移动端）</div>
+      <div class="section-desc">仅在 &lt;768px 显示，激活态深蓝色，含 safe-area 适配</div>
+      <div class="comp-card full">
+        <div class="comp-name">双 Tab：交易录入（激活）/ 持仓展示</div>
+        <div class="bbar" style="max-width:375px">
+          <button class="bbar-tab active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span>交易录入</span>
+          </button>
+          <button class="bbar-tab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-8"/></svg>
+            <span>持仓展示</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 12. Top Navigation -->
+    <div class="section">
+      <div class="section-title">12 顶部导航栏（PC）</div>
+      <div class="section-desc">仅在 ≥768px 显示，深蓝底白字，Tab 下划线激活态，自适应缩放</div>
+      <div class="comp-card full">
+        <div style="display:flex;align-items:center;padding:0 20px;height:48px;background:var(--accent);color:#fff;border-radius:var(--radius-md);gap:24px">
+          <span style="font-weight:600;font-size:16px;letter-spacing:0.02em">基金交易账簿</span>
+          <button style="display:flex;align-items:center;padding:0 16px;height:100%;color:#fff;border-bottom:2px solid #fff;background:none;border-left:none;border-right:none;border-top:none;font-size:13px;cursor:pointer">交易录入</button>
+          <button style="display:flex;align-items:center;padding:0 16px;height:100%;color:rgba(255,255,255,0.7);border-bottom:2px solid transparent;background:none;border-left:none;border-right:none;border-top:none;font-size:13px;cursor:pointer">持仓展示</button>
+          <span style="flex:1"></span>
+          <span style="font-size:11px;opacity:0.65">2026/6/20 14:30</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 13. Refresh Button -->
+    <div class="section">
+      <div class="section-title">13 刷新按钮</div>
+      <div class="section-desc">圆形 ⟳ 按钮，点击时旋转动画 0.8s，用于单基金估值刷新</div>
+      <div class="comp-grid">
+        <div class="comp-card">
+          <div class="comp-name">默认态</div>
+          <div class="comp-demo"><button class="refresh-btn" title="刷新估值">⟳</button></div>
+        </div>
+        <div class="comp-card">
+          <div class="comp-name">旋转中</div>
+          <div class="comp-demo"><button class="refresh-btn spinning" title="刷新估值">⟳</button></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="text-align:center;padding:24px;color:var(--muted);font-size:12px">
+    基金交易账簿 · 组件库 · v1.0
+  </div>
+</body>
+</html>

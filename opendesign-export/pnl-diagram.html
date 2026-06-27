@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>盈亏计算逻辑 — 基金交易账簿</title>
+  <style>
+    :root {
+      --bg:      #f3f4f6;
+      --surface: #ffffff;
+      --fg:      #111827;
+      --muted:   #6b7280;
+      --border:  #e5e7eb;
+      --accent:  #1e3a8a;
+      --accent-light: #dbeafe;
+      --gain:    #dc2626;
+      --gain-bg: #fef2f2;
+      --loss:    #16a34a;
+      --loss-bg: #f0fdf4;
+      --warn:    #f59e0b;
+      --flat:    #9ca3af;
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font-display: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+      --font-body:    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+      --font-mono:    'SF Mono', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, 'Menlo', 'Consolas', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--fg);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Header */
+    .page-header {
+      background: var(--accent);
+      color: #fff;
+      padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 48px);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .page-header h1 {
+      font-size: clamp(18px, 2.5vw, 24px);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    .page-header .back-link {
+      color: rgba(255,255,255,0.8);
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+    }
+    .page-header .back-link:hover { color: #fff; }
+
+    /* Main */
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: clamp(16px, 3vw, 32px);
+    }
+
+    /* Section */
+    .section {
+      margin-bottom: 32px;
+    }
+    .section-title {
+      font-size: 20px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ============================================================
+       Flow Diagram
+       ============================================================ */
+    .flow-diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      padding: 32px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    @media (min-width: 768px) {
+      .flow-diagram {
+        flex-direction: row;
+        align-items: stretch;
+        justify-content: center;
+        gap: 0;
+      }
+    }
+
+    /* Source column */
+    .flow-sources {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 0;
+    }
+    @media (min-width: 768px) {
+      .flow-sources { width: 260px; }
+    }
+
+    .source-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+    }
+    .source-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .source-formula {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .source-value {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .source-card.card-gain  { border-left: 3px solid var(--gain); }
+    .source-card.card-loss  { border-left: 3px solid var(--loss); }
+    .source-card.card-div   { border-left: 3px solid var(--warn); }
+
+    /* Arrows column */
+    .flow-arrows {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      color: var(--muted);
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    @media (min-width: 768px) {
+      .flow-arrows {
+        flex-direction: column;
+        padding: 0 20px;
+      }
+    }
+    .arrow-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .arrow-connector {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 20px;
+    }
+
+    /* Total column */
+    .flow-total {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+    @media (min-width: 768px) {
+      .flow-total { width: 320px; }
+    }
+
+    .total-card {
+      background: var(--accent-light);
+      border: 2px solid var(--accent);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      text-align: center;
+    }
+    .total-label {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+    .total-formula {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .total-value {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .rate-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+    }
+    .rate-formula {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    /* ============================================================
+       Sample Calculation
+       ============================================================ */
+    .calc-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      font-size: 14px;
+    }
+    .calc-table th {
+      background: var(--bg);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 2px solid var(--border);
+    }
+    .calc-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .calc-table tr:last-child td { border-bottom: none; }
+    .calc-table .mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .calc-table .row-total {
+      background: var(--accent-light);
+      font-weight: 600;
+    }
+    .calc-table .row-total td {
+      border-top: 2px solid var(--accent);
+    }
+
+    /* ============================================================
+       Cost Method
+       ============================================================ */
+    .info-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      margin-bottom: 16px;
+    }
+    .info-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .info-card p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 8px;
+    }
+    .info-card .formula-block {
+      background: var(--bg);
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      color: var(--fg);
+      overflow-x: auto;
+    }
+
+    /* Responsive tables */
+    @media (max-width: 767px) {
+      .calc-table { font-size: 12px; }
+      .calc-table th, .calc-table td { padding: 8px 10px; }
+    }
+
+    /* Footer */
+    .page-footer {
+      text-align: center;
+      padding: 24px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.02em;
+    }
+  </style>
+</head>
+<body>
+  <header class="page-header">
+    <a href="index.html" class="back-link">← 返回应用</a>
+    <h1>盈亏计算逻辑说明</h1>
+  </header>
+
+  <div class="container">
+
+    <!-- ============================================================
+         Flow Diagram
+         ============================================================ -->
+    <div class="section">
+      <div class="section-title">📐 总盈亏构成</div>
+
+      <div class="flow-diagram">
+        <!-- Three sources -->
+        <div class="flow-sources">
+          <!-- Floating P&L -->
+          <div class="source-card card-gain">
+            <div class="source-label">① 浮动盈亏</div>
+            <div class="source-formula">持仓份额 × 最新净值 − 剩余持仓成本</div>
+            <div class="source-value pnl-up">+1,866.72</div>
+          </div>
+          <!-- Realized P&L -->
+          <div class="source-card card-loss">
+            <div class="source-label">② 已实现盈亏</div>
+            <div class="source-formula">历史卖出收入 − 卖出部分成本</div>
+            <div class="source-value pnl-down">−346.85</div>
+          </div>
+          <!-- Dividends -->
+          <div class="source-card card-div">
+            <div class="source-label">③ 累计现金分红</div>
+            <div class="source-formula">现金分红 + 红利再投资入账</div>
+            <div class="source-value" style="color:var(--warn)">+1,000.50</div>
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="flow-arrows">
+          <div class="arrow-group">
+            <span class="arrow-connector" style="color:var(--gain)">＋</span>
+            <span class="arrow-connector" style="color:var(--loss)">＋</span>
+            <span class="arrow-connector" style="color:var(--warn)">＝</span>
+            <span style="color:var(--muted);font-size:11px;letter-spacing:0.04em">▼</span>
+          </div>
+        </div>
+
+        <!-- Total -->
+        <div class="flow-total">
+          <div class="total-card">
+            <div class="total-label">总盈亏</div>
+            <div class="total-formula">浮动盈亏 + 已实现盈亏 + 累计现金分红</div>
+            <div class="total-value pnl-up">+2,520.37</div>
+          </div>
+          <div class="rate-card">
+            <div class="source-label">总盈亏率</div>
+            <div class="rate-formula">总盈亏 ÷ 累计买入本金 × 100%</div>
+            <div class="source-value pnl-up">+8.56%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         Sample Calculation
+         ============================================================ -->
+    <div class="section">
+      <div class="section-title">🔢 示例演算（以易方达蓝筹精选 005827 为例）</div>
+
+      <table class="calc-table">
+        <thead>
+          <tr>
+            <th>项目</th>
+            <th>计算方式</th>
+            <th>数值</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>买入记录</td>
+            <td class="mono">2026-05-28：8,000 元 ÷ 2.2800 净值 = 3,508.77 份<br>2026-06-18：10,000 元 ÷ 2.3456 净值 = 4,256.78 份</td>
+            <td class="mono">累计买入 18,000 元<br>合计 7,765.55 份</td>
+          </tr>
+          <tr>
+            <td>持仓成本</td>
+            <td>移动加权平均法：18,000 ÷ 7,765.55</td>
+            <td class="mono">2.3179 元/份</td>
+          </tr>
+          <tr>
+            <td>剩余持仓成本</td>
+            <td>（未卖出，成本 = 累计买入本金）</td>
+            <td class="mono">18,000.00 元</td>
+          </tr>
+          <tr>
+            <td>最新净值</td>
+            <td>取自估值接口 dwjz</td>
+            <td class="mono">2.4012</td>
+          </tr>
+          <tr>
+            <td>持仓市值</td>
+            <td class="mono">7,765.55 × 2.4012</td>
+            <td class="mono">18,646.72 元</td>
+          </tr>
+          <tr>
+            <td style="color:var(--gain);font-weight:600">浮动盈亏</td>
+            <td class="mono" style="color:var(--muted)">18,646.72 − 18,000.00</td>
+            <td class="mono pnl-up">+646.72 元</td>
+          </tr>
+          <tr>
+            <td style="color:var(--loss);font-weight:600">已实现盈亏</td>
+            <td class="mono" style="color:var(--muted)">（该基金未发生卖出）</td>
+            <td class="mono pnl-zero">0.00 元</td>
+          </tr>
+          <tr>
+            <td style="color:var(--warn);font-weight:600">累计现金分红</td>
+            <td class="mono" style="color:var(--muted)">（该基金未发生分红）</td>
+            <td class="mono pnl-zero">0.00 元</td>
+          </tr>
+          <tr class="row-total">
+            <td style="font-weight:700">该基金总盈亏</td>
+            <td class="mono">646.72 + 0 + 0</td>
+            <td class="mono pnl-up">+646.72 元</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============================================================
+         Cost Method
+         ============================================================ -->
+    <div class="section">
+      <div class="section-title">⚖️ 移动加权平均成本法</div>
+      <div class="info-card">
+        <h3>为什么用移动加权平均？</h3>
+        <p>
+          基金定投场景下，同一基金可能多次买入，每次价格不同。移动加权平均法在每次买入时重新计算平均成本单价，卖出时按当前平均成本扣减持仓，能更准确地反映真实持仓成本。
+        </p>
+        <h3 style="margin-top:16px">计算公式</h3>
+        <div class="formula-block">
+          每次买入后：<br>
+          新平均成本 = (原持仓份额 × 原平均成本 + 本次买入金额) ÷ (原持仓份额 + 本次买入份额)<br><br>
+          每次卖出后：<br>
+          卖出成本 = 卖出份额 × 当前平均成本<br>
+          剩余成本 = 原持仓成本 − 卖出成本<br>
+          剩余份额 = 原持仓份额 − 卖出份额<br>
+          <span style="color:var(--muted)">（平均成本单价不变，仅扣减份额和成本）</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+         Full Account Summary
+         ============================================================ -->
+    <div class="section">
+      <div class="section-title">📊 全账户汇总（含所有持仓基金）</div>
+
+      <table class="calc-table">
+        <thead>
+          <tr>
+            <th>基金</th>
+            <th>持仓市值</th>
+            <th>持仓成本</th>
+            <th>浮动盈亏</th>
+            <th>已实现盈亏</th>
+            <th>累计分红</th>
+            <th>总盈亏</th>
+            <th>总盈亏率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>易方达蓝筹精选</td>
+            <td class="mono">18,646.72</td>
+            <td class="mono">18,000.00</td>
+            <td class="mono pnl-up">+646.72</td>
+            <td class="mono pnl-zero">0.00</td>
+            <td class="mono pnl-zero">0.00</td>
+            <td class="mono pnl-up">+646.72</td>
+            <td class="mono pnl-up">+3.59%</td>
+          </tr>
+          <tr>
+            <td>中欧医疗健康混合</td>
+            <td class="mono" style="color:var(--flat)">待回填</td>
+            <td class="mono">8,000.00</td>
+            <td class="mono" style="color:var(--flat)">—</td>
+            <td class="mono pnl-zero">0.00</td>
+            <td class="mono pnl-zero">0.00</td>
+            <td class="mono" style="color:var(--flat)">—</td>
+            <td class="mono" style="color:var(--flat)">—</td>
+          </tr>
+          <tr>
+            <td>招商中证白酒</td>
+            <td class="mono">0.00</td>
+            <td class="mono">0.00</td>
+            <td class="mono pnl-zero">0.00</td>
+            <td class="mono pnl-down">−346.85</td>
+            <td class="mono pnl-zero">0.00</td>
+            <td class="mono pnl-down">−346.85</td>
+            <td class="mono" style="color:var(--flat)">已清仓</td>
+          </tr>
+          <tr>
+            <td>天弘沪深300</td>
+            <td class="mono">0.00</td>
+            <td class="mono">0.00</td>
+            <td class="mono pnl-zero">0.00</td>
+            <td class="mono pnl-zero">0.00</td>
+            <td class="mono" style="color:var(--warn)">+320.50</td>
+            <td class="mono" style="color:var(--warn)">+320.50</td>
+            <td class="mono" style="color:var(--flat)">纯分红</td>
+          </tr>
+          <tr>
+            <td>兴全合润混合</td>
+            <td class="mono" style="color:var(--flat)">待计算</td>
+            <td class="mono">680.00</td>
+            <td class="mono" style="color:var(--flat)">—</td>
+            <td class="mono pnl-zero">0.00</td>
+            <td class="mono" style="color:var(--warn)">+680.00</td>
+            <td class="mono" style="color:var(--flat)">—</td>
+            <td class="mono" style="color:var(--flat)">—</td>
+          </tr>
+          <tr class="row-total">
+            <td style="font-weight:700">全账户合计</td>
+            <td class="mono">—</td>
+            <td class="mono">29,445.00</td>
+            <td class="mono pnl-up">+646.72</td>
+            <td class="mono pnl-down">−346.85</td>
+            <td class="mono" style="color:var(--warn)">+1,000.50</td>
+            <td class="mono pnl-up" style="font-weight:700;font-size:16px">+1,300.37</td>
+            <td class="mono pnl-up" style="font-weight:700">+4.42%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ============================================================
+         A-share Color Convention
+         ============================================================ -->
+    <div class="section">
+      <div class="section-title">🎨 A 股配色惯例</div>
+      <div class="info-card">
+        <p>本系统所有盈亏和涨跌颜色遵循中国 A 股市场惯例，与国际/西方惯例<strong>相反</strong>：</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:12px">
+          <div style="padding:12px;border-radius:var(--radius-md);background:var(--gain-bg);border:1px solid var(--gain)">
+            <span class="source-label" style="color:var(--gain)">上涨 / 盈利</span>
+            <div class="source-value pnl-up">红色 #dc2626</div>
+          </div>
+          <div style="padding:12px;border-radius:var(--radius-md);background:var(--loss-bg);border:1px solid var(--loss)">
+            <span class="source-label" style="color:var(--loss)">下跌 / 亏损</span>
+            <div class="source-value pnl-down">绿色 #16a34a</div>
+          </div>
+          <div style="padding:12px;border-radius:var(--radius-md);background:var(--flat-bg);border:1px solid var(--flat)">
+            <span class="source-label" style="color:var(--flat)">持平 / 零</span>
+            <div class="source-value pnl-zero">灰色 #9ca3af</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      基金交易账簿 · 盈亏计算说明 · 移动加权平均成本法
+    </div>
+  </div>
+</body>
+</html>

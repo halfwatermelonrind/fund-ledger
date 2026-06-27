@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__browsermcp__browser_screenshot",
+      "mcp__browsermcp__browser_snapshot"
+    ]
+  }
+}

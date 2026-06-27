@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp -r /tmp/fund-ledger-scaffold/* /Users/yomi/Dev/open-design/fund-ledger/)",
+      "Bash(cp /tmp/fund-ledger-scaffold/.gitignore /Users/yomi/Dev/open-design/fund-ledger/)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npx tsx *)",
+      "Bash(npx vite *)",
+      "Bash(curl -s -o /dev/null -w \"Dev server: HTTP %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(kill %1)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s http://localhost:5173/)",
+      "Bash(curl -s --max-time 5 \"http://fundgz.1234567.com.cn/js/005827.js?rt=$\\(date +%s\\)000\")",
+      "Bash(curl -s --max-time 10 \"http://fund.eastmoney.com/pingzhongdata/005827.js?v=$\\(date +%s\\)000\")",
+      "Bash(curl -s --max-time 8 \"http://fund.eastmoney.com/pingzhongdata/014674.js\" -o /tmp/014674.js)",
+      "Bash(node -e ' *)",
+      "Bash(node *)",
+      "WebFetch(domain:fundf10.eastmoney.com)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(pkill -9 -f \"vite\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s --max-time 5 \"https://fundgz.1234567.com.cn/js/005827.js?rt=1\")",
+      "Bash(curl -s --max-time 5 \"https://fund.eastmoney.com/pingzhongdata/005827.js\")",
+      "Bash(git init *)",
+      "Bash(npm run *)",
+      "Bash(pkill -9 -f \"brew\")",
+      "Bash(HOMEBREW_NO_AUTO_UPDATE=1 brew install *)",
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger add .)",
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger commit -m \"基金交易账簿 v1.0 — 初始化发布\")",
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger branch -M main)"
+    ]
+  }
+}

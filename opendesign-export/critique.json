@@ -1,0 +1,11 @@
+{
+  "kind": "critique-panel",
+  "score": 4,
+  "axes": {
+    "philosophy":  { "score": 4, "notes": "Tech/utility 金融工具姿态一致：数据密集表格、等宽数字、白底+深蓝主色、A股涨红跌绿惯例。简洁金融风贯彻始终。" },
+    "hierarchy":   { "score": 4, "notes": "清晰的视觉层级：汇总卡片→持仓表格、表单→流水列表。状态标签有效引导注意力。一键回填按钮可更突出。" },
+    "execution":   { "score": 4, "notes": "系统无衬线体+等宽数字，tabular-nums 正确设置，letter-spacing 符合规则。响应式 768px 断点合理。移动端底部 TabBar 配合安全区适配。" },
+    "specificity": { "score": 5, "notes": "真实中国基金名称与代码（易方达蓝筹005827等），合理的交易样本数据，正确的中文金融术语。A股涨红跌绿惯例全部遵循。" },
+    "restraint":   { "score": 4, "notes": "一个品牌主色（深蓝），三个语义色（涨红/跌绿/警告橙）各有明确用途。无渐变装饰，卡片边框克制。橙色待回填标签是唯一装饰性张力点。" }
+  }
+}

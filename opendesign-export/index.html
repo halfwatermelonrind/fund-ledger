@@ -1,0 +1,1689 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>基金交易账簿</title>
+  <style>
+    /* ============================================================
+       Design Tokens — 基金交易账簿
+       ============================================================ */
+    :root {
+      --bg:      #f3f4f6;
+      --surface: #ffffff;
+      --fg:      #111827;
+      --muted:   #6b7280;
+      --border:  #e5e7eb;
+      --accent:  #1e3a8a;
+      --accent-light: #dbeafe;
+      --gain:    #dc2626;
+      --gain-bg: #fef2f2;
+      --loss:    #16a34a;
+      --loss-bg: #f0fdf4;
+      --warn:    #f59e0b;
+      --warn-bg: #fffbeb;
+      --flat:    #9ca3af;
+      --flat-bg: #f9fafb;
+
+      --font-display: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+      --font-body:    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+      --font-mono:    'SF Mono', 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, 'Menlo', 'Consolas', monospace;
+
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    /* ============================================================
+       Reset & Base
+       ============================================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font-body);
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--fg);
+      background: var(--bg);
+      min-height: 100%;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+
+    /* ============================================================
+       Layout
+       ============================================================ */
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* PC Top Navigation */
+    .topnav {
+      display: none;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--accent);
+      color: #fff;
+    }
+    /* ≥ 768px: show nav, compact proportions */
+    @media (min-width: 768px) {
+      .topnav {
+        display: flex;
+        align-items: center;
+        padding: 0 clamp(12px, 2vw, 24px);
+        height: clamp(44px, 5vw, 56px);
+      }
+    }
+    .topnav-brand {
+      font-size: clamp(14px, 1.5vw, 18px);
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-right: clamp(12px, 3vw, 40px);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .topnav-tabs {
+      display: flex;
+      gap: 2px;
+      height: 100%;
+      flex-shrink: 0;
+    }
+    .topnav-tab {
+      display: flex;
+      align-items: center;
+      padding: 0 clamp(10px, 1.6vw, 20px);
+      font-size: clamp(12px, 1.1vw, 14px);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: rgba(255,255,255,0.7);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      height: 100%;
+      white-space: nowrap;
+    }
+    .topnav-tab:hover { color: rgba(255,255,255,0.9); }
+    .topnav-tab.active { color: #fff; border-bottom-color: #fff; }
+    .topnav-clock {
+      font-size: clamp(10px, 0.9vw, 12px);
+      opacity: 0.65;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    /* Hide clock below 900px to save space */
+    @media (max-width: 899px) {
+      .topnav-clock { display: none; }
+    }
+
+    /* Main Content Area */
+    .main-content {
+      flex: 1;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    @media (min-width: 768px) {
+      .main-content { padding: 24px; gap: 24px; }
+    }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ============================================================
+       Page 1: Transaction Entry — layout
+       ============================================================ */
+    .tx-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    @media (min-width: 768px) {
+      .tx-layout {
+        display: grid;
+        grid-template-columns: 38fr 62fr;
+        gap: 24px;
+        align-items: start;
+      }
+    }
+
+    /* ============================================================
+       Cards
+       ============================================================ */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    @media (min-width: 768px) { .card { padding: 24px; } }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: var(--fg);
+    }
+
+    /* ============================================================
+       Transaction Type Tabs
+       ============================================================ */
+    .type-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: 16px;
+    }
+    .type-tab {
+      flex: 1;
+      padding: 8px 6px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      text-align: center;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .type-tab.active {
+      background: var(--surface);
+      color: var(--accent);
+      box-shadow: var(--shadow-sm);
+    }
+    @media (min-width: 768px) { .type-tab { font-size: 14px; padding: 10px 8px; } }
+
+    /* ============================================================
+       Form Elements
+       ============================================================ */
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--fg);
+      margin-bottom: 4px;
+      letter-spacing: 0.01em;
+    }
+    .form-label .optional {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 12px;
+    }
+    .form-input, .form-select {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      font-size: 14px;
+      font-family: var(--font-body);
+      color: var(--fg);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.15s, box-shadow 0.15s;
+      -webkit-appearance: none;
+    }
+    .form-input:focus, .form-select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(30,58,138,0.1);
+    }
+    .form-input.mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+    .form-input::placeholder { color: var(--flat); }
+    .form-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .form-select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    /* ============================================================
+       Buttons
+       ============================================================ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 40px;
+      padding: 0 20px;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--fg);
+      border-color: var(--border);
+    }
+    .btn-secondary:hover { background: var(--bg); }
+    .btn-sm {
+      height: 32px;
+      padding: 0 12px;
+      font-size: 12px;
+    }
+    .btn-xs {
+      height: 28px;
+      padding: 0 8px;
+      font-size: 11px;
+      border-radius: var(--radius-sm);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--accent);
+      border-color: transparent;
+    }
+    .btn-ghost:hover { background: var(--accent-light); }
+    .btn-danger {
+      background: transparent;
+      color: var(--gain);
+      border-color: var(--gain);
+    }
+    .btn-danger:hover { background: var(--gain-bg); }
+    .btn-warn {
+      background: var(--warn);
+      color: #fff;
+      border-color: var(--warn);
+    }
+    .btn-warn:hover { background: #d97706; }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* ============================================================
+       Status Badges
+       ============================================================ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      border-radius: 999px;
+      white-space: nowrap;
+      line-height: 1.6;
+    }
+    .badge-confirmed { background: var(--accent-light); color: var(--accent); }
+    .badge-pending   { background: var(--warn-bg); color: #92400e; }
+    .badge-cleared   { background: var(--flat-bg); color: var(--flat); }
+
+    /* ============================================================
+       A-share P&L Colors
+       ============================================================ */
+    .pnl-up   { color: var(--gain); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .pnl-down { color: var(--loss); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .pnl-zero { color: var(--flat); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+    /* ============================================================
+       Tables
+       ============================================================ */
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      min-width: 780px;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--muted);
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th.sortable:hover { color: var(--accent); }
+    thead th .sort-arrow { margin-left: 4px; font-size: 10px; }
+    tbody td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody tr.row-cleared { background: var(--flat-bg); color: var(--muted); }
+    tbody td.mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+    }
+
+    /* Expandable row detail */
+    .row-detail {
+      display: none;
+      background: #fafbfc;
+      border-bottom: 1px solid var(--border);
+    }
+    .row-detail.open { display: table-row; }
+    .row-detail td {
+      padding: 12px 16px;
+      font-size: 13px;
+      white-space: normal;
+    }
+    .detail-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .detail-item {
+      display: grid;
+      grid-template-columns: 90px 120px 80px 1fr 90px;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      padding: 6px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+    .detail-item:last-child { border-bottom: none; }
+
+    /* ============================================================
+       Summary Cards (Holdings Page)
+       ============================================================ */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    @media (min-width: 768px) {
+      .summary-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (min-width: 1024px) {
+      .summary-grid { grid-template-columns: repeat(7, 1fr); }
+    }
+    .summary-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      text-align: center;
+    }
+    .summary-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .summary-value {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    /* ============================================================
+       Filter Bar
+       ============================================================ */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .filter-pill {
+      padding: 4px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .filter-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .filter-pill:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+    /* ============================================================
+       Toast
+       ============================================================ */
+    .toast-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: var(--fg);
+      color: #fff;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      animation: toastIn 0.3s ease;
+      pointer-events: auto;
+      max-width: 360px;
+    }
+    .toast.success { border-left: 3px solid var(--loss); }
+    .toast.error   { border-left: 3px solid var(--gain); }
+    .toast.info    { border-left: 3px solid var(--accent); }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ============================================================
+       Modal
+       ============================================================ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 1500;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .modal-body {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    /* ============================================================
+       Mobile Bottom TabBar
+       ============================================================ */
+    .bottom-tabbar {
+      display: flex;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      z-index: 100;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    @media (min-width: 768px) { .bottom-tabbar { display: none; } }
+    .bottom-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 4px;
+      gap: 2px;
+      border: none;
+      background: none;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .bottom-tab.active { color: var(--accent); }
+    .bottom-tab svg { width: 24px; height: 24px; }
+    .bottom-tab.active svg { color: var(--accent); }
+
+    /* Mobile safe area bottom padding for main content */
+    @media (max-width: 767px) {
+      .app-shell { padding-bottom: 64px; }
+    }
+
+    /* ============================================================
+       Inline Edit / Backfill
+       ============================================================ */
+    .inline-edit {
+      width: 80px;
+      height: 28px;
+      padding: 0 6px;
+      font-size: 12px;
+      font-family: var(--font-mono);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius-sm);
+      outline: none;
+    }
+    .inline-edit:focus { box-shadow: 0 0 0 2px rgba(30,58,138,0.15); }
+
+    /* ============================================================
+       Refresh indicator
+       ============================================================ */
+    .refresh-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .refresh-btn.spinning { animation: spin 0.8s linear; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ============================================================
+       Valuation Time
+       ============================================================ */
+    .val-time {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.01em;
+    }
+
+    /* Misc */
+    .text-sm { font-size: 12px; }
+    .text-muted { color: var(--muted); }
+    .mt-8 { margin-top: 8px; }
+    .mt-12 { margin-top: 12px; }
+    .gap-8 { gap: 8px; }
+    .flex-between { display: flex; align-items: center; justify-content: space-between; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+
+    <!-- PC Top Navigation -->
+    <nav class="topnav" role="navigation" aria-label="主导航">
+      <div class="topnav-brand">基金交易账簿</div>
+      <div class="topnav-tabs">
+        <button class="topnav-tab active" data-page="tx" onclick="switchPage('tx')">交易录入</button>
+        <button class="topnav-tab" data-page="holdings" onclick="switchPage('holdings')">持仓展示</button>
+      </div>
+      <div style="flex:1;min-width:8px"></div>
+      <span class="topnav-clock" id="clock">—</span>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+
+      <!-- ========================================================
+           Page 1: Transaction Entry
+           ======================================================== -->
+      <div class="page active" id="page-tx">
+        <div class="tx-layout">
+
+          <!-- Left: Entry Form -->
+          <div class="card" data-od-id="tx-form">
+            <div class="card-header">
+              <h2 class="card-title">录入交易</h2>
+            </div>
+
+            <!-- Transaction Type Tabs -->
+            <div class="type-tabs" id="type-tabs">
+              <button class="type-tab active" data-type="buy" onclick="switchTxType('buy')">买入</button>
+              <button class="type-tab" data-type="sell" onclick="switchTxType('sell')">卖出</button>
+              <button class="type-tab" data-type="dividend" onclick="switchTxType('dividend')">现金分红</button>
+              <button class="type-tab" data-type="reinvest" onclick="switchTxType('reinvest')">红利再投资</button>
+            </div>
+
+            <form id="tx-form" onsubmit="saveTransaction(event)">
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="fund-code">基金代码</label>
+                  <input class="form-input mono" type="text" id="fund-code" placeholder="输入代码，失焦自动联想"
+                         onblur="lookupFund()" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="fund-name">基金名称</label>
+                  <input class="form-input" type="text" id="fund-name" placeholder="自动联想" readonly />
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="tx-date">交易日期</label>
+                  <input class="form-input" type="date" id="tx-date" required />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="tx-nav">
+                    单位净值 <span class="optional">（可选）</span>
+                  </label>
+                  <input class="form-input mono" type="number" id="tx-nav" step="0.0001" min="0"
+                         placeholder="未知可留空，后续自动回填" oninput="calcPreview()" />
+                </div>
+              </div>
+
+              <!-- Buy fields -->
+              <div class="form-group" id="field-buy-amount">
+                <label class="form-label" for="buy-amount">购买金额（元）</label>
+                <input class="form-input mono" type="number" id="buy-amount" step="0.01" min="0"
+                       placeholder="请输入购买金额" oninput="calcPreview()" />
+                <div class="form-hint" id="hint-cost-ref" style="display:none"></div>
+              </div>
+
+              <!-- Sell fields -->
+              <div class="form-group" id="field-sell-shares" style="display:none">
+                <label class="form-label" for="sell-shares">卖出份额</label>
+                <input class="form-input mono" type="number" id="sell-shares" step="0.01" min="0"
+                       placeholder="请输入卖出份额" oninput="checkSellLimit()" />
+                <div class="form-hint" id="hint-sell-avail" style="display:none"></div>
+              </div>
+
+              <!-- Dividend fields -->
+              <div class="form-group" id="field-dividend-amount" style="display:none">
+                <label class="form-label" for="dividend-amount">分红金额（元）</label>
+                <input class="form-input mono" type="number" id="dividend-amount" step="0.01" min="0"
+                       placeholder="每份分红 × 持仓份额自动计算，可手动修正" />
+              </div>
+
+              <!-- Reinvest fields -->
+              <div class="form-group" id="field-reinvest-amount" style="display:none">
+                <label class="form-label" for="reinvest-amount">红利再投资金额（元）</label>
+                <input class="form-input mono" type="number" id="reinvest-amount" step="0.01" min="0"
+                       placeholder="请输入再投资金额" />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="tx-channel">代销渠道</label>
+                  <select class="form-select" id="tx-channel">
+                    <option value="支付宝">支付宝</option>
+                    <option value="天天基金">天天基金</option>
+                    <option value="银行">银行</option>
+                    <option value="券商">券商</option>
+                    <option value="其他">其他</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="tx-fee">交易费率（%）</label>
+                  <input class="form-input mono" type="number" id="tx-fee" step="0.01" min="0" max="100" value="0.15" />
+                </div>
+              </div>
+
+              <!-- Preview -->
+              <div id="preview-box" style="display:none; background:var(--accent-light); padding:12px; border-radius:var(--radius-sm); margin-bottom:14px; font-size:13px;">
+                <strong>预计确认份额：</strong><span id="preview-shares" class="mono">—</span> 份
+                &nbsp;&nbsp;<strong>预计到账：</strong><span id="preview-amount" class="mono">—</span> 元
+              </div>
+
+              <div class="btn-group">
+                <button type="submit" class="btn btn-primary">保存录入</button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">重置</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Right: Transaction List -->
+          <div class="card" data-od-id="tx-list">
+            <div class="card-header">
+              <h2 class="card-title">交易流水</h2>
+              <div class="btn-group">
+                <button class="btn btn-warn btn-sm" onclick="batchBackfill()">一键回填净值</button>
+              </div>
+            </div>
+
+            <!-- Filter -->
+            <div class="filter-bar" id="tx-filter-bar">
+              <button class="filter-pill active" data-status="all" onclick="filterTx('all', this)">全部</button>
+              <button class="filter-pill" data-status="confirmed" onclick="filterTx('confirmed', this)">已确认</button>
+              <button class="filter-pill" data-status="pending" onclick="filterTx('pending', this)">待回填</button>
+              <button class="filter-pill" data-status="cleared" onclick="filterTx('cleared', this)">已清仓</button>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>日期</th>
+                    <th>基金代码</th>
+                    <th>基金</th>
+                    <th>类型</th>
+                    <th>金额/份额</th>
+                    <th>净值</th>
+                    <th>确认份额</th>
+                    <th>状态</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="tx-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================================
+           Page 2: Holdings
+           ======================================================== -->
+      <div class="page" id="page-holdings">
+        <!-- Summary Cards -->
+        <div class="summary-grid" id="summary-grid" data-od-id="holdings-summary"></div>
+
+        <!-- Holdings Table -->
+        <div class="card" data-od-id="holdings-table">
+          <div class="card-header">
+            <h2 class="card-title">持仓明细</h2>
+            <div class="btn-group">
+              <button class="btn btn-primary btn-sm" onclick="refreshAllValuations()">刷新全部估值</button>
+            </div>
+          </div>
+          <div class="val-time" id="val-time" style="margin-bottom:12px;"></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="sortable">基金代码</th>
+                  <th>名称</th>
+                  <th class="sortable">持仓份额</th>
+                  <th class="sortable">持仓市值</th>
+                  <th class="sortable">持仓成本</th>
+                  <th>成本单价</th>
+                  <th>最新净值</th>
+                  <th>实时估值</th>
+                  <th class="sortable">预估涨跌</th>
+                  <th class="sortable">浮动盈亏</th>
+                  <th class="sortable">已实现盈亏</th>
+                  <th>累计分红</th>
+                  <th class="sortable">总盈亏</th>
+                  <th class="sortable">总盈亏率</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="holdings-table-body"></tbody>
+            </table>
+          </div>
+          <!-- Cleared section -->
+          <div style="margin-top:16px;" id="cleared-section">
+            <div class="card-title text-muted" style="font-size:13px;cursor:pointer" onclick="toggleCleared()" id="cleared-toggle">
+              ▸ 已清仓
+            </div>
+            <div class="table-wrap" id="cleared-table-wrap" style="display:none;margin-top:8px;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>基金代码</th><th>名称</th><th>已实现盈亏</th><th>累计分红</th><th>总盈亏</th>
+                  </tr>
+                </thead>
+                <tbody id="cleared-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Bottom TabBar -->
+    <nav class="bottom-tabbar" role="navigation" aria-label="移动导航">
+      <button class="bottom-tab active" data-page="tx" onclick="switchPage('tx')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span>交易录入</span>
+      </button>
+      <button class="bottom-tab" data-page="holdings" onclick="switchPage('holdings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="M7 16l4-8 4 4 4-8"/></svg>
+        <span>持仓展示</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" id="modal-delete">
+    <div class="modal">
+      <div class="modal-title">确认删除</div>
+      <div class="modal-body">确定要删除这条交易记录吗？此操作不可撤销。该交易关联的持仓数据将同步更新。</div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-delete')">取消</button>
+        <button class="btn btn-danger btn-sm" id="btn-confirm-delete">确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Backfill Modal -->
+  <div class="modal-overlay" id="modal-backfill">
+    <div class="modal">
+      <div class="modal-title">手动回填净值</div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">基金：<span id="bf-fund-name">—</span></label>
+        </div>
+        <div class="form-group">
+          <label class="form-label">交易日期：<span id="bf-date">—</span></label>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="bf-nav">单位净值</label>
+          <input class="form-input mono" type="number" id="bf-nav" step="0.0001" min="0" placeholder="输入净值" />
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary btn-sm" onclick="closeModal('modal-backfill')">取消</button>
+        <button class="btn btn-primary btn-sm" onclick="confirmBackfill()">确认回填</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // Fund Database (mock)
+    // ============================================================
+    const FUND_DB = {
+      '005827': '易方达蓝筹精选混合',
+      '003095': '中欧医疗健康混合A',
+      '000961': '天弘沪深300ETF联接A',
+      '161725': '招商中证白酒指数(LOF)A',
+      '163406': '兴全合润混合(LOF)',
+      '011363': '南方中证500ETF联接A',
+    };
+
+    // ============================================================
+    // Sample Data
+    // ============================================================
+    let transactions = [
+      { id: 1,  date: '2026-06-18', code: '005827', name: '易方达蓝筹精选混合', type: '买入', amount: 10000, nav: 2.3456, shares: 4256.78, status: 'confirmed', channel: '支付宝', fee: 0.15, source: '手动录入' },
+      { id: 2,  date: '2026-06-15', code: '003095', name: '中欧医疗健康混合A', type: '买入', amount: 5000, nav: null, shares: null, status: 'pending', channel: '天天基金', fee: 0.12, source: '待确认' },
+      { id: 3,  date: '2026-06-12', code: '161725', name: '招商中证白酒指数(LOF)A', type: '卖出', amount: null, nav: 1.7832, shares: 2000, status: 'confirmed', channel: '支付宝', fee: 0.50, source: '手动录入', sellShares: 2000, sellAmount: 3566.40 },
+      { id: 4,  date: '2026-06-10', code: '000961', name: '天弘沪深300ETF联接A', type: '现金分红', amount: 320.50, nav: null, shares: null, status: 'confirmed', channel: '银行', fee: 0, source: '自动回填' },
+      { id: 5,  date: '2026-06-05', code: '163406', name: '兴全合润混合(LOF)', type: '红利再投资', amount: 680.00, nav: 2.1120, shares: 321.97, status: 'confirmed', channel: '券商', fee: 0, source: '自动回填' },
+      { id: 6,  date: '2026-05-28', code: '005827', name: '易方达蓝筹精选混合', type: '买入', amount: 8000, nav: 2.2800, shares: 3508.77, status: 'confirmed', channel: '支付宝', fee: 0.15, source: '手动录入' },
+      { id: 7,  date: '2026-05-20', code: '011363', name: '南方中证500ETF联接A', type: '卖出', amount: null, nav: 1.4560, shares: 5000, status: 'cleared', channel: '天天基金', fee: 0.50, source: '手动录入', sellShares: 5000, sellAmount: 7280.00 },
+      { id: 8,  date: '2026-05-15', code: '011363', name: '南方中证500ETF联接A', type: '买入', amount: 7500, nav: 1.4520, shares: 5165.29, status: 'cleared', channel: '天天基金', fee: 0.12, source: '自动回填' },
+      { id: 9,  date: '2026-06-17', code: '003095', name: '中欧医疗健康混合A', type: '买入', amount: 3000, nav: null, shares: null, status: 'pending', channel: '支付宝', fee: 0.15, source: '待确认' },
+    ];
+
+    let nextId = 10;
+
+    // Holdings derived data (computed from transactions)
+    // For each fund: { code, name, shares, cost, realizedPnL, totalDividends, cleared }
+    function computeHoldings() {
+      const map = {};
+      transactions.forEach(t => {
+        if (!map[t.code]) {
+          map[t.code] = { code: t.code, name: t.name, shares: 0, cost: 0, realizedPnL: 0, totalDividends: 0, transactions: [] };
+        }
+        map[t.code].transactions.push(t);
+
+        if (t.status === 'cleared') {
+          map[t.code].cleared = true;
+        }
+
+        if (t.type === '买入' && t.status === 'confirmed') {
+          map[t.code].shares += t.shares;
+          map[t.code].cost += t.amount;
+        } else if (t.type === '买入' && t.status === 'pending') {
+          // pending buy: no confirmed shares yet
+        } else if (t.type === '卖出' && t.status === 'confirmed') {
+          const sellShares = t.sellShares || 0;
+          const avgCost = map[t.code].shares > 0 ? map[t.code].cost / map[t.code].shares : 0;
+          const sellCost = avgCost * sellShares;
+          const sellRevenue = t.sellAmount || 0;
+          map[t.code].shares -= sellShares;
+          map[t.code].cost -= sellCost;
+          map[t.code].realizedPnL += (sellRevenue - sellCost);
+          if (map[t.code].shares <= 0.001) {
+            map[t.code].shares = 0;
+            map[t.code].cost = 0;
+            map[t.code].cleared = true;
+          }
+        } else if (t.type === '现金分红' && t.status === 'confirmed') {
+          map[t.code].totalDividends += (t.amount || 0);
+        } else if (t.type === '红利再投资' && t.status === 'confirmed') {
+          map[t.code].totalDividends += (t.amount || 0);
+          map[t.code].shares += (t.shares || 0);
+          map[t.code].cost += (t.amount || 0);
+        }
+      });
+
+      // Filter out funds with zero shares AND zero cost AND not cleared (i.e., only pending entries)
+      return Object.values(map);
+    }
+
+    // Mock latest NAVs and valuations
+    const NAV_DATA = {
+      '005827': { dwjz: 2.4012, gsz: 2.4150, gszzl: 0.57, gztime: '2026-06-20 14:46' },
+      '003095': { dwjz: 1.8520, gsz: 1.8390, gszzl: -0.70, gztime: '2026-06-20 14:46' },
+      '000961': { dwjz: 1.5240, gsz: 1.5310, gszzl: 0.46, gztime: '2026-06-20 14:45' },
+      '161725': { dwjz: 1.8100, gsz: 1.8220, gszzl: 0.66, gztime: '2026-06-20 14:46' },
+      '163406': { dwjz: 2.1860, gsz: 2.1910, gszzl: 0.23, gztime: '2026-06-20 14:45' },
+      '011363': { dwjz: 1.4620, gsz: 1.4620, gszzl: 0, gztime: '2026-06-20 14:44' },
+    };
+
+    function isTradingHours() {
+      const now = new Date();
+      const day = now.getDay();
+      if (day === 0 || day === 6) return false;
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const t = h * 60 + m;
+      return t >= 570 && t <= 900; // 9:30-15:00
+    }
+
+    // ============================================================
+    // Clock
+    // ============================================================
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent =
+        now.toLocaleDateString('zh-CN') + ' ' + now.toLocaleTimeString('zh-CN', { hour12: false });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ============================================================
+    // Page / Tab Switching
+    // ============================================================
+    let currentPage = 'tx';
+
+    function switchPage(page) {
+      currentPage = page;
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
+
+      document.querySelectorAll('.topnav-tab, .bottom-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.page === page);
+      });
+
+      if (page === 'holdings') renderHoldings();
+    }
+
+    // ============================================================
+    // Transaction Type Switching
+    // ============================================================
+    let currentTxType = 'buy';
+
+    function switchTxType(type) {
+      currentTxType = type;
+      document.querySelectorAll('#type-tabs .type-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.type === type);
+      });
+
+      // Show/hide fields
+      document.getElementById('field-buy-amount').style.display = (type === 'buy') ? '' : 'none';
+      document.getElementById('field-sell-shares').style.display = (type === 'sell') ? '' : 'none';
+      document.getElementById('field-dividend-amount').style.display = (type === 'dividend') ? '' : 'none';
+      document.getElementById('field-reinvest-amount').style.display = (type === 'reinvest') ? '' : 'none';
+
+      // Required toggles
+      document.getElementById('buy-amount').required = (type === 'buy');
+      document.getElementById('sell-shares').required = (type === 'sell');
+      document.getElementById('dividend-amount').required = (type === 'dividend');
+      document.getElementById('reinvest-amount').required = (type === 'reinvest');
+
+      // Hint visibility
+      updateSellHint();
+      document.getElementById('preview-box').style.display = 'none';
+    }
+
+    function updateSellHint() {
+      const hint = document.getElementById('hint-sell-avail');
+      const code = document.getElementById('fund-code').value.trim();
+      if (currentTxType === 'sell' && code) {
+        const holdings = computeHoldings().filter(h => h.code === code && !h.cleared);
+        if (holdings.length > 0) {
+          hint.style.display = '';
+          hint.textContent = '当前可用份额：' + holdings[0].shares.toFixed(2) + ' 份';
+        } else {
+          hint.style.display = '';
+          hint.textContent = '⚠ 该基金当前无可用持仓';
+        }
+      } else {
+        hint.style.display = 'none';
+      }
+    }
+
+    // ============================================================
+    // Fund Lookup
+    // ============================================================
+    function lookupFund() {
+      const code = document.getElementById('fund-code').value.trim();
+      const nameEl = document.getElementById('fund-name');
+      const costHint = document.getElementById('hint-cost-ref');
+
+      if (FUND_DB[code]) {
+        nameEl.value = FUND_DB[code];
+        // Show cost reference for buy
+        const holdings = computeHoldings().filter(h => h.code === code && !h.cleared);
+        if (holdings.length > 0 && holdings[0].shares > 0) {
+          const avgCost = holdings[0].cost / holdings[0].shares;
+          costHint.style.display = '';
+          costHint.textContent = '当前持仓成本参考：' + avgCost.toFixed(4) + ' 元/份（持仓 ' + holdings[0].shares.toFixed(2) + ' 份）';
+        } else {
+          costHint.style.display = 'none';
+        }
+      } else if (code.length === 6) {
+        nameEl.value = '未找到该基金，请检查代码';
+      } else {
+        nameEl.value = '';
+      }
+      updateSellHint();
+      calcPreview();
+    }
+
+    // ============================================================
+    // Preview Calculation
+    // ============================================================
+    function calcPreview() {
+      const box = document.getElementById('preview-box');
+      const nav = parseFloat(document.getElementById('tx-nav').value);
+      if (isNaN(nav) || nav <= 0) { box.style.display = 'none'; return; }
+
+      let shares = null, amount = null;
+      if (currentTxType === 'buy') {
+        const amt = parseFloat(document.getElementById('buy-amount').value);
+        if (!isNaN(amt) && amt > 0) {
+          const fee = parseFloat(document.getElementById('tx-fee').value) || 0;
+          const netAmt = amt * (1 - fee / 100);
+          shares = (netAmt / nav).toFixed(2);
+          amount = netAmt.toFixed(2);
+        }
+      } else if (currentTxType === 'sell') {
+        const qty = parseFloat(document.getElementById('sell-shares').value);
+        if (!isNaN(qty) && qty > 0) {
+          const fee = parseFloat(document.getElementById('tx-fee').value) || 0;
+          const gross = qty * nav;
+          amount = (gross * (1 - fee / 100)).toFixed(2);
+          shares = qty.toFixed(2);
+        }
+      } else if (currentTxType === 'dividend') {
+        const divAmt = parseFloat(document.getElementById('dividend-amount').value);
+        if (!isNaN(divAmt) && divAmt > 0) {
+          amount = divAmt.toFixed(2);
+          shares = '—';
+        }
+      } else if (currentTxType === 'reinvest') {
+        const reinAmt = parseFloat(document.getElementById('reinvest-amount').value);
+        if (!isNaN(reinAmt) && reinAmt > 0) {
+          shares = (reinAmt / nav).toFixed(2);
+          amount = reinAmt.toFixed(2);
+        }
+      }
+
+      if (shares !== null || amount !== null) {
+        box.style.display = '';
+        document.getElementById('preview-shares').textContent = shares || '—';
+        document.getElementById('preview-amount').textContent = amount || '—';
+      } else {
+        box.style.display = 'none';
+      }
+    }
+
+    function checkSellLimit() {
+      updateSellHint();
+      const code = document.getElementById('fund-code').value.trim();
+      const sellShares = parseFloat(document.getElementById('sell-shares').value);
+      if (code && !isNaN(sellShares)) {
+        const holdings = computeHoldings().filter(h => h.code === code && !h.cleared);
+        if (holdings.length > 0 && sellShares > holdings[0].shares) {
+          showToast('卖出份额超出当前可用持仓 ' + holdings[0].shares.toFixed(2) + ' 份', 'error');
+        }
+      }
+      calcPreview();
+    }
+
+    // ============================================================
+    // Save Transaction
+    // ============================================================
+    function saveTransaction(e) {
+      e.preventDefault();
+      const code = document.getElementById('fund-code').value.trim();
+      const name = document.getElementById('fund-name').value.trim();
+      const date = document.getElementById('tx-date').value;
+      const navRaw = document.getElementById('tx-nav').value;
+      const nav = navRaw ? parseFloat(navRaw) : null;
+      const channel = document.getElementById('tx-channel').value;
+      const fee = parseFloat(document.getElementById('tx-fee').value) || 0;
+
+      if (!code || !name || !date) {
+        showToast('请填写基金代码、名称和交易日期', 'error');
+        return;
+      }
+
+      let record = {
+        id: nextId++,
+        date, code, name,
+        type: currentTxType === 'buy' ? '买入' : currentTxType === 'sell' ? '卖出' : currentTxType === 'dividend' ? '现金分红' : '红利再投资',
+        nav, channel, fee,
+        status: nav ? 'confirmed' : 'pending',
+        source: nav ? '手动录入' : '待确认',
+      };
+
+      if (currentTxType === 'buy') {
+        record.amount = parseFloat(document.getElementById('buy-amount').value);
+        if (!record.amount || record.amount <= 0) { showToast('请填写购买金额', 'error'); return; }
+        if (nav) record.shares = parseFloat(((record.amount * (1 - fee / 100)) / nav).toFixed(2));
+        else record.shares = null;
+      } else if (currentTxType === 'sell') {
+        record.sellShares = parseFloat(document.getElementById('sell-shares').value);
+        if (!record.sellShares || record.sellShares <= 0) { showToast('请填写卖出份额', 'error'); return; }
+        const ch = computeHoldings().filter(h => h.code === code && !h.cleared);
+        if (ch.length > 0 && record.sellShares > ch[0].shares) {
+          showToast('卖出份额超出可用持仓', 'error');
+          return;
+        }
+        record.shares = record.sellShares;
+        record.sellAmount = nav ? parseFloat((record.sellShares * nav * (1 - fee / 100)).toFixed(2)) : null;
+        record.amount = record.sellAmount;
+      } else if (currentTxType === 'dividend') {
+        record.amount = parseFloat(document.getElementById('dividend-amount').value);
+        if (!record.amount || record.amount <= 0) { showToast('请填写分红金额', 'error'); return; }
+        record.shares = null;
+        record.status = 'confirmed'; // dividends don't need NAV
+        record.source = '手动录入';
+      } else if (currentTxType === 'reinvest') {
+        record.amount = parseFloat(document.getElementById('reinvest-amount').value);
+        if (!record.amount || record.amount <= 0) { showToast('请填写再投资金额', 'error'); return; }
+        if (nav) record.shares = parseFloat((record.amount / nav).toFixed(2));
+        else { record.shares = null; }
+      }
+
+      transactions.unshift(record);
+      renderTxTable();
+      resetForm();
+      showToast('交易录入成功' + (record.status === 'pending' ? '，净值待回填' : ''), record.status === 'pending' ? 'info' : 'success');
+    }
+
+    function resetForm() {
+      document.getElementById('tx-form').reset();
+      document.getElementById('fund-name').value = '';
+      document.getElementById('tx-fee').value = '0.15';
+      document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('preview-box').style.display = 'none';
+      document.getElementById('hint-cost-ref').style.display = 'none';
+      document.getElementById('hint-sell-avail').style.display = 'none';
+    }
+
+    // ============================================================
+    // Render Transaction Table
+    // ============================================================
+    let txFilter = 'all';
+
+    function filterTx(status, el) {
+      txFilter = status;
+      document.querySelectorAll('#tx-filter-bar .filter-pill').forEach(p => p.classList.remove('active'));
+      el.classList.add('active');
+      renderTxTable();
+    }
+
+    function renderTxTable() {
+      const tbody = document.getElementById('tx-table-body');
+      let data = transactions.slice().sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+      if (txFilter !== 'all') data = data.filter(t => t.status === txFilter);
+
+      tbody.innerHTML = data.map(t => {
+        const typeLabel = t.type;
+        let typeColor = '#1e3a8a';
+        if (t.type === '卖出') typeColor = '#16a34a';
+        else if (t.type === '现金分红') typeColor = '#f59e0b';
+        else if (t.type === '红利再投资') typeColor = '#7e22ce';
+
+        const badgeClass = t.status === 'confirmed' ? 'badge-confirmed' : t.status === 'pending' ? 'badge-pending' : 'badge-cleared';
+        const badgeText = t.status === 'confirmed' ? '已确认' : t.status === 'pending' ? '待回填' : '已清仓';
+
+        const amountDisplay = t.type === '买入' ? (t.amount ? t.amount.toFixed(2) + ' 元' : '—') :
+                              t.type === '卖出' ? (t.sellShares ? t.sellShares.toFixed(2) + ' 份' : '—') :
+                              t.type === '现金分红' ? (t.amount ? t.amount.toFixed(2) + ' 元' : '—') :
+                              (t.amount ? t.amount.toFixed(2) + ' 元' : '—');
+
+        const navDisplay = t.nav ? t.nav.toFixed(4) : '<span style="color:#f59e0b">—</span>';
+        const sharesDisplay = t.shares ? t.shares.toFixed(2) : '—';
+
+        let actions = '';
+        if (t.status === 'pending') {
+          actions = `<button class="btn btn-xs btn-ghost" onclick="openBackfill(${t.id})">回填</button>`;
+        } else if (t.status === 'confirmed') {
+          actions = `<button class="btn btn-xs btn-ghost" onclick="openBackfill(${t.id})">编辑</button>`;
+        }
+        actions += ` <button class="btn btn-xs btn-danger" onclick="confirmDelete(${t.id})">删除</button>`;
+
+        return `<tr class="${t.status === 'cleared' ? 'row-cleared' : ''}">
+          <td style="white-space:nowrap">${t.date}</td>
+          <td class="mono">${t.code}</td>
+          <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.name}">${t.name}</td>
+          <td><span style="color:${typeColor};font-weight:500;font-size:12px">${typeLabel}</span></td>
+          <td class="mono">${amountDisplay}</td>
+          <td class="mono">${navDisplay}</td>
+          <td class="mono">${sharesDisplay}</td>
+          <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+          <td>${actions}</td>
+        </tr>`;
+      }).join('');
+
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:32px;color:var(--muted)">暂无交易记录</td></tr>';
+      }
+    }
+
+    // ============================================================
+    // Delete Confirmation
+    // ============================================================
+    let deleteTargetId = null;
+
+    function confirmDelete(id) {
+      deleteTargetId = id;
+      document.getElementById('modal-delete').classList.add('open');
+    }
+
+    document.getElementById('btn-confirm-delete').addEventListener('click', () => {
+      if (deleteTargetId !== null) {
+        transactions = transactions.filter(t => t.id !== deleteTargetId);
+        deleteTargetId = null;
+        renderTxTable();
+        closeModal('modal-delete');
+        showToast('交易记录已删除', 'info');
+      }
+    });
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('open');
+    }
+
+    // Click overlay to close
+    document.querySelectorAll('.modal-overlay').forEach(ov => {
+      ov.addEventListener('click', function(e) {
+        if (e.target === this) closeModal(this.id);
+      });
+    });
+
+    // ============================================================
+    // Backfill
+    // ============================================================
+    let backfillTargetId = null;
+
+    function openBackfill(id) {
+      backfillTargetId = id;
+      const t = transactions.find(tx => tx.id === id);
+      if (!t) return;
+      document.getElementById('bf-fund-name').textContent = t.name;
+      document.getElementById('bf-date').textContent = t.date;
+      document.getElementById('bf-nav').value = t.nav || '';
+      document.getElementById('modal-backfill').classList.add('open');
+    }
+
+    function confirmBackfill() {
+      const nav = parseFloat(document.getElementById('bf-nav').value);
+      if (isNaN(nav) || nav <= 0) { showToast('请输入有效的净值', 'error'); return; }
+
+      const t = transactions.find(tx => tx.id === backfillTargetId);
+      if (!t) return;
+
+      t.nav = nav;
+      t.status = 'confirmed';
+      t.source = '手动录入';
+
+      // Recalculate shares for buy/reinvest
+      if (t.type === '买入' && t.amount) {
+        t.shares = parseFloat(((t.amount * (1 - t.fee / 100)) / nav).toFixed(2));
+      } else if (t.type === '红利再投资' && t.amount) {
+        t.shares = parseFloat((t.amount / nav).toFixed(2));
+      } else if (t.type === '卖出' && t.sellShares) {
+        t.sellAmount = parseFloat((t.sellShares * nav * (1 - t.fee / 100)).toFixed(2));
+        t.amount = t.sellAmount;
+      }
+
+      renderTxTable();
+      closeModal('modal-backfill');
+      showToast('净值回填成功', 'success');
+      backfillTargetId = null;
+    }
+
+    function batchBackfill() {
+      const pending = transactions.filter(t => t.status === 'pending');
+      if (pending.length === 0) { showToast('没有待回填的记录', 'info'); return; }
+
+      let success = 0, fail = 0;
+      pending.forEach(t => {
+        // Simulate fetching historical NAV
+        const mockNav = NAV_DATA[t.code] ? NAV_DATA[t.code].dwjz : null;
+        if (mockNav) {
+          t.nav = mockNav;
+          t.status = 'confirmed';
+          t.source = '自动回填';
+          if (t.type === '买入' && t.amount) {
+            t.shares = parseFloat(((t.amount * (1 - t.fee / 100)) / mockNav).toFixed(2));
+          } else if (t.type === '红利再投资' && t.amount) {
+            t.shares = parseFloat((t.amount / mockNav).toFixed(2));
+          }
+          success++;
+        } else {
+          fail++;
+        }
+      });
+
+      renderTxTable();
+      showToast('一键回填完成：成功 ' + success + ' 条' + (fail > 0 ? '，失败 ' + fail + ' 条' : ''), fail > 0 ? 'info' : 'success');
+    }
+
+    // ============================================================
+    // Render Holdings Page
+    // ============================================================
+    let sortKey = null;
+    let sortDir = 1;
+
+    function renderHoldings(sortK) {
+      if (sortK) {
+        if (sortKey === sortK) sortDir *= -1;
+        else { sortKey = sortK; sortDir = -1; }
+      }
+
+      const holdings = computeHoldings();
+      const active = holdings.filter(h => !h.cleared);
+      const cleared = holdings.filter(h => h.cleared);
+
+      // Compute total summary
+      let totalMv = 0, totalCost = 0, totalFloatPnL = 0, totalRealized = 0, totalDiv = 0;
+      active.forEach(h => {
+        const nav = NAV_DATA[h.code] ? NAV_DATA[h.code].dwjz : 0;
+        const mv = h.shares * nav;
+        const floatPnL = mv - h.cost;
+        totalMv += mv;
+        totalCost += h.cost;
+        totalFloatPnL += floatPnL;
+        totalRealized += h.realizedPnL;
+        totalDiv += h.totalDividends;
+      });
+      // Add cleared fund dividends and realized
+      cleared.forEach(h => {
+        totalRealized += h.realizedPnL;
+        totalDiv += h.totalDividends;
+      });
+
+      const totalPnL = totalFloatPnL + totalRealized + totalDiv;
+      const totalCostBasis = totalCost;
+      const totalPnLRate = totalCostBasis > 0 ? (totalPnL / totalCostBasis * 100) : 0;
+
+      // Render summary
+      const summaryItems = [
+        { label: '总市值', value: totalMv.toFixed(2) + ' 元', cls: '' },
+        { label: '总成本', value: totalCost.toFixed(2) + ' 元', cls: '' },
+        { label: '总浮动盈亏', value: (totalFloatPnL >= 0 ? '+' : '') + totalFloatPnL.toFixed(2) + ' 元', cls: totalFloatPnL > 0 ? 'pnl-up' : totalFloatPnL < 0 ? 'pnl-down' : 'pnl-zero' },
+        { label: '总已实现盈亏', value: (totalRealized >= 0 ? '+' : '') + totalRealized.toFixed(2) + ' 元', cls: totalRealized > 0 ? 'pnl-up' : totalRealized < 0 ? 'pnl-down' : 'pnl-zero' },
+        { label: '累计分红', value: totalDiv.toFixed(2) + ' 元', cls: '' },
+        { label: '总盈亏', value: (totalPnL >= 0 ? '+' : '') + totalPnL.toFixed(2) + ' 元', cls: totalPnL > 0 ? 'pnl-up' : totalPnL < 0 ? 'pnl-down' : 'pnl-zero' },
+        { label: '总盈亏率', value: (totalPnLRate >= 0 ? '+' : '') + totalPnLRate.toFixed(2) + '%', cls: totalPnLRate > 0 ? 'pnl-up' : totalPnLRate < 0 ? 'pnl-down' : 'pnl-zero' },
+      ];
+
+      document.getElementById('summary-grid').innerHTML = summaryItems.map(s =>
+        `<div class="summary-item">
+          <div class="summary-label">${s.label}</div>
+          <div class="summary-value ${s.cls}">${s.value}</div>
+        </div>`
+      ).join('');
+
+      // Sort active holdings
+      const sorted = [...active].sort((a, b) => {
+        const aNav = NAV_DATA[a.code] ? NAV_DATA[a.code].dwjz : 0;
+        const bNav = NAV_DATA[b.code] ? NAV_DATA[b.code].dwjz : 0;
+        const aMv = a.shares * aNav;
+        const bMv = b.shares * bNav;
+        const aFloat = aMv - a.cost;
+        const bFloat = bMv - b.cost;
+        const aTotal = aFloat + a.realizedPnL + a.totalDividends;
+        const bTotal = bFloat + b.realizedPnL + b.totalDividends;
+
+        let va, vb;
+        switch (sortKey) {
+          case 'code': va = a.code; vb = b.code; break;
+          case 'shares': va = a.shares; vb = b.shares; break;
+          case 'mv': va = aMv; vb = bMv; break;
+          case 'cost': va = a.cost; vb = b.cost; break;
+          case 'change': {
+            const aGsz = NAV_DATA[a.code] ? NAV_DATA[a.code].gszzl : 0;
+            const bGsz = NAV_DATA[b.code] ? NAV_DATA[b.code].gszzl : 0;
+            va = aGsz; vb = bGsz; break;
+          }
+          case 'float': va = aFloat; vb = bFloat; break;
+          case 'realized': va = a.realizedPnL; vb = b.realizedPnL; break;
+          case 'total': va = aTotal; vb = bTotal; break;
+          case 'rate': {
+            const aRate = a.cost > 0 ? aTotal / a.cost : 0;
+            const bRate = b.cost > 0 ? bTotal / b.cost : 0;
+            va = aRate; vb = bRate; break;
+          }
+          default: va = Math.abs(aTotal); vb = Math.abs(bTotal);
+        }
+        if (typeof va === 'string') return sortDir * va.localeCompare(vb);
+        return sortDir * (va - vb);
+      });
+
+      // Render table
+      const isTrading = isTradingHours();
+      document.getElementById('val-time').textContent = isTrading ? '盘中实时估值' : '非交易时段，实时估值不可用';
+
+      document.getElementById('holdings-table-body').innerHTML = sorted.map((h, i) => {
+        const nd = NAV_DATA[h.code] || {};
+        const dwjz = nd.dwjz || 0;
+        const gsz = nd.gsz;
+        const gszzl = nd.gszzl;
+        const gztime = nd.gztime;
+        const mv = h.shares * dwjz;
+        const floatPnL = mv - h.cost;
+        const totalPnL = floatPnL + h.realizedPnL + h.totalDividends;
+        const totalRate = h.cost > 0 ? (totalPnL / h.cost * 100) : 0;
+        const avgCost = h.shares > 0 ? h.cost / h.shares : 0;
+
+        const gszDisplay = isTrading && gsz ? gsz.toFixed(4) : '<span class="text-muted">--</span>';
+        const gszzlDisplay = isTrading && gszzl !== undefined ? (gszzl >= 0 ? '+' : '') + gszzl.toFixed(2) + '%' : '<span class="text-muted">--</span>';
+        const gszzlClass = gszzl > 0 ? 'pnl-up' : gszzl < 0 ? 'pnl-down' : 'pnl-zero';
+
+        return `<tr data-code="${h.code}" class="holding-row">
+          <td class="mono">${h.code}</td>
+          <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${h.name}">${h.name}</td>
+          <td class="mono">${h.shares.toFixed(2)}</td>
+          <td class="mono">${mv.toFixed(2)}</td>
+          <td class="mono">${h.cost.toFixed(2)}</td>
+          <td class="mono">${avgCost.toFixed(4)}</td>
+          <td class="mono">${dwjz.toFixed(4)}</td>
+          <td class="mono">${gszDisplay}</td>
+          <td class="${gszzlClass}">${gszzlDisplay}</td>
+          <td class="${floatPnL > 0 ? 'pnl-up' : floatPnL < 0 ? 'pnl-down' : 'pnl-zero'}">${(floatPnL >= 0 ? '+' : '') + floatPnL.toFixed(2)}</td>
+          <td class="${h.realizedPnL > 0 ? 'pnl-up' : h.realizedPnL < 0 ? 'pnl-down' : 'pnl-zero'}">${(h.realizedPnL >= 0 ? '+' : '') + h.realizedPnL.toFixed(2)}</td>
+          <td class="mono">${h.totalDividends.toFixed(2)}</td>
+          <td class="${totalPnL > 0 ? 'pnl-up' : totalPnL < 0 ? 'pnl-down' : 'pnl-zero'}">${(totalPnL >= 0 ? '+' : '') + totalPnL.toFixed(2)}</td>
+          <td class="${totalRate > 0 ? 'pnl-up' : totalRate < 0 ? 'pnl-down' : 'pnl-zero'}">${(totalRate >= 0 ? '+' : '') + totalRate.toFixed(2)}%</td>
+          <td>
+            <button class="refresh-btn" onclick="refreshSingleValuation('${h.code}', this)" title="刷新估值">⟳</button>
+            <button class="btn btn-xs btn-ghost" style="margin-left:4px" onclick="toggleRowDetail('${h.code}')">详情</button>
+          </td>
+        </tr>
+        <tr class="row-detail" id="detail-${h.code}">
+          <td colspan="15">
+            <div class="detail-timeline">
+              <div style="font-weight:600;font-size:13px;margin-bottom:4px">📋 ${h.name} — 历史交易流水</div>
+              ${h.transactions.slice().sort((a,b) => b.date.localeCompare(a.date)).map(tx => {
+                const txAmount = tx.type === '卖出' ? (tx.sellShares ? tx.sellShares.toFixed(2)+' 份' : '—') :
+                                 (tx.amount ? tx.amount.toFixed(2)+' 元' : '—');
+                return `<div class="detail-item">
+                  <span>${tx.date}</span>
+                  <span style="color:${tx.type==='卖出'?'var(--loss)':tx.type==='现金分红'?'var(--warn)':'var(--accent)'};font-weight:500">${tx.type}</span>
+                  <span class="mono">${txAmount}</span>
+                  <span class="mono">净值 ${tx.nav ? tx.nav.toFixed(4) : '—'}</span>
+                  <span class="badge ${tx.status==='confirmed'?'badge-confirmed':tx.status==='pending'?'badge-pending':'badge-cleared'}">${tx.status==='confirmed'?'已确认':tx.status==='pending'?'待回填':'已清仓'}</span>
+                </div>`;
+              }).join('')}
+              <div style="font-weight:600;font-size:13px;margin-top:8px">🧧 累计现金分红：<span class="mono">${h.totalDividends.toFixed(2)} 元</span></div>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      // Render cleared
+      document.getElementById('cleared-table-body').innerHTML = cleared.map(h => {
+        const totalPnL = h.realizedPnL + h.totalDividends;
+        return `<tr class="row-cleared">
+          <td class="mono">${h.code}</td>
+          <td>${h.name}</td>
+          <td class="${h.realizedPnL > 0 ? 'pnl-up' : h.realizedPnL < 0 ? 'pnl-down' : 'pnl-zero'}">${(h.realizedPnL >= 0 ? '+' : '') + h.realizedPnL.toFixed(2)}</td>
+          <td class="mono">${h.totalDividends.toFixed(2)}</td>
+          <td class="${totalPnL > 0 ? 'pnl-up' : totalPnL < 0 ? 'pnl-down' : 'pnl-zero'}">${(totalPnL >= 0 ? '+' : '') + totalPnL.toFixed(2)}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--muted)">暂无已清仓基金</td></tr>';
+    }
+
+    function toggleCleared() {
+      const wrap = document.getElementById('cleared-table-wrap');
+      const toggle = document.getElementById('cleared-toggle');
+      const isOpen = wrap.style.display !== 'none';
+      wrap.style.display = isOpen ? 'none' : '';
+      toggle.textContent = (isOpen ? '▸' : '▾') + ' 已清仓';
+    }
+
+    function toggleRowDetail(code) {
+      const el = document.getElementById('detail-' + code);
+      if (el) el.classList.toggle('open');
+    }
+
+    // ============================================================
+    // Valuation Refresh
+    // ============================================================
+    function refreshSingleValuation(code, btn) {
+      btn.classList.add('spinning');
+      setTimeout(() => {
+        btn.classList.remove('spinning');
+        // Simulate updating NAV data
+        const nd = NAV_DATA[code];
+        if (nd) {
+          nd.gsz = nd.dwjz * (1 + (Math.random() - 0.5) * 0.02);
+          nd.gszzl = parseFloat(((nd.gsz / nd.dwjz - 1) * 100).toFixed(2));
+          nd.gztime = new Date().toISOString().slice(0, 16).replace('T', ' ');
+        }
+        renderHoldings();
+        showToast('估值刷新完成', 'success');
+      }, 800);
+    }
+
+    function refreshAllValuations() {
+      Object.keys(NAV_DATA).forEach(code => {
+        const nd = NAV_DATA[code];
+        nd.gsz = nd.dwjz * (1 + (Math.random() - 0.5) * 0.02);
+        nd.gszzl = parseFloat(((nd.gsz / nd.dwjz - 1) * 100).toFixed(2));
+        nd.gztime = new Date().toISOString().slice(0, 16).replace('T', ' ');
+      });
+      renderHoldings();
+      showToast('全部估值刷新完成', 'success');
+    }
+
+    // ============================================================
+    // Table Header Sort (Holdings)
+    // ============================================================
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('#holdings-table-body') || e.target.closest('#summary-grid')) return;
+      if (e.target.closest('thead th.sortable')) {
+        const th = e.target.closest('th.sortable');
+        const text = th.textContent.trim();
+        const keyMap = { '基金代码': 'code', '持仓份额': 'shares', '持仓市值': 'mv', '持仓成本': 'cost', '预估涨跌': 'change', '浮动盈亏': 'float', '已实现盈亏': 'realized', '总盈亏': 'total', '总盈亏率': 'rate' };
+        renderHoldings(keyMap[text] || null);
+      }
+    });
+
+    // ============================================================
+    // Toast
+    // ============================================================
+    function showToast(msg, type) {
+      type = type || 'info';
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast ' + type;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.3s';
+        setTimeout(() => el.remove(), 300);
+      }, 2500);
+    }
+
+    // ============================================================
+    // Init
+    // ============================================================
+    document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+    renderTxTable();
+
+    // Close modals on Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+      }
+    });
+  </script>
+</body>
+</html>
