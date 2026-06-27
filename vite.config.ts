@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/fund-ledger/',
   plugins: [
     react(),
     VitePWA({
@@ -16,7 +17,7 @@ export default defineConfig({
         theme_color: '#1e3a8a',
         background_color: '#f3f4f6',
         display: 'standalone',
-        start_url: '/',
+        start_url: '/fund-ledger/',
         icons: [
           {
             src: 'favicon.svg',

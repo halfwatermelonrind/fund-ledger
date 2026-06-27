@@ -14,7 +14,7 @@ import { aggregatePositions } from './utils/calculator'
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/fund-ledger">
       <AppShell />
     </BrowserRouter>
   )

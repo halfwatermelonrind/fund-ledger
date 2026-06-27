@@ -1,1 +1,1 @@
-{"name":"基金交易账簿","short_name":"基金账簿","description":"个人基金持仓管理与盈亏计算","start_url":"/","display":"standalone","background_color":"#f3f4f6","theme_color":"#1e3a8a","lang":"en","scope":"/","icons":[{"src":"favicon.svg","sizes":"any","type":"image/svg+xml"}]}
+{"name":"基金交易账簿","short_name":"基金账簿","description":"个人基金持仓管理与盈亏计算","start_url":"/fund-ledger/","display":"standalone","background_color":"#f3f4f6","theme_color":"#1e3a8a","lang":"en","scope":"/fund-ledger/","icons":[{"src":"favicon.svg","sizes":"any","type":"image/svg+xml"}]}

@@ -28,7 +28,14 @@
       "Bash(HOMEBREW_NO_AUTO_UPDATE=1 brew install *)",
       "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger add .)",
       "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger commit -m \"基金交易账簿 v1.0 — 初始化发布\")",
-      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger branch -M main)"
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger branch -M main)",
+      "Bash(pkill -9 -f \"git\")",
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger push -f origin main)",
+      "Bash(gh repo *)",
+      "Bash(gh auth *)",
+      "Bash(gh api *)",
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger commit -m \"fix: base path for GitHub Pages\")",
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger push origin main)"
     ]
   }
 }
