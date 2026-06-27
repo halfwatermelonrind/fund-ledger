@@ -35,7 +35,9 @@
       "Bash(gh auth *)",
       "Bash(gh api *)",
       "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger commit -m \"fix: base path for GitHub Pages\")",
-      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger push origin main)"
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger push origin main)",
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger commit -m \"fix: mobile form fields single-column to prevent overlap\")",
+      "Bash(git -C /Users/yomi/Dev/open-design/fund-ledger push)"
     ]
   }
 }
