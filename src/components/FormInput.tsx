@@ -9,7 +9,7 @@ interface Props extends InputHTMLAttributes<HTMLInputElement> {
 
 export default function FormInput({ label, optional, hint, mono, className = '', id, ...rest }: Props) {
   return (
-    <div className="mb-3.5">
+    <div className="mb-3.5 min-w-0">
       <label htmlFor={id} className="block text-[13px] font-medium text-fg mb-1 tracking-wider">
         {label}
         {optional && <span className="text-muted font-normal text-xs ml-1">（可选）</span>}

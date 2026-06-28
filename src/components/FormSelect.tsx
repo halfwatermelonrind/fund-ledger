@@ -7,7 +7,7 @@ interface Props extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export default function FormSelect({ label, children, className = '', id, ...rest }: Props) {
   return (
-    <div className="mb-3.5">
+    <div className="mb-3.5 min-w-0">
       <label htmlFor={id} className="block text-[13px] font-medium text-fg mb-1 tracking-wider">{label}</label>
       <select
         id={id}

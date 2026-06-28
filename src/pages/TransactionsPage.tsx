@@ -384,7 +384,7 @@ export default function TransactionsPage() {
         <TypeTabs active={txType} onChange={(t) => { setTxType(t); if (editId) setEditId(null) }} />
 
         <form onSubmit={handleSave}>
-          <div className="grid grid-cols-1 pc:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <FormInput label="基金代码" id="fund-code" mono value={form.fundCode}
               onChange={(e) => setForm((f) => ({ ...f, fundCode: e.target.value }))}
               onBlur={handleFundBlur} placeholder="输入代码，失焦自动联想" required />
@@ -392,7 +392,7 @@ export default function TransactionsPage() {
               onChange={(e) => setForm((f) => ({ ...f, fundName: e.target.value }))}
               placeholder={lookingUp ? '查询中…' : '自动联想'} readOnly={lookingUp} />
           </div>
-          <div className="grid grid-cols-1 pc:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <FormInput label="交易日期" id="tx-date" type="date" value={form.tradeDate}
               onChange={(e) => setForm((f) => ({ ...f, tradeDate: e.target.value }))} required />
             <FormInput label="单位净值" id="tx-nav" mono optional type="number" step="0.0001" min="0"
@@ -424,7 +424,7 @@ export default function TransactionsPage() {
               placeholder="请输入再投资金额" required />
           )}
 
-          <div className="grid grid-cols-1 pc:grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <FormSelect label="代销渠道" id="tx-channel" value={form.channel}
               onChange={(e) => setForm((f) => ({ ...f, channel: e.target.value }))}>
               {channels.map((c) => <option key={c} value={c}>{c}</option>)}
