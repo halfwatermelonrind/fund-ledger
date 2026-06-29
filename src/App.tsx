@@ -7,8 +7,10 @@ import { ToastContainer, showToast } from './components/Toast'
 import ConfirmDialog from './components/ConfirmDialog'
 import BatchImportModal from './components/BatchImportModal'
 import Button from './components/Button'
-import TransactionsPage from './pages/TransactionsPage'
-import PositionsPage from './pages/PositionsPage'
+import EntryPage from './pages/EntryPage'
+import TxLogPage from './pages/TxLogPage'
+import SummaryPage from './pages/SummaryPage'
+import DetailsPage from './pages/DetailsPage'
 import { useFundStore } from './stores/useFundStore'
 import { aggregatePositions } from './utils/calculator'
 
@@ -117,9 +119,11 @@ function AppShell() {
       {/* Main content */}
       <main className="flex-1 p-4 pc:p-6 pc:pb-6 pb-20">
         <Routes>
-          <Route path="/" element={<Navigate to="/transactions" replace />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-          <Route path="/positions" element={<PositionsPage />} />
+          <Route path="/" element={<Navigate to="/entry" replace />} />
+          <Route path="/entry" element={<EntryPage />} />
+          <Route path="/txlog" element={<TxLogPage />} />
+          <Route path="/summary" element={<SummaryPage />} />
+          <Route path="/details" element={<DetailsPage />} />
         </Routes>
       </main>
 

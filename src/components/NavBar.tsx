@@ -2,8 +2,10 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 
 const tabs = [
-  { path: '/transactions', label: '交易录入' },
-  { path: '/positions', label: '持仓展示' },
+  { path: '/entry', label: '录入' },
+  { path: '/txlog', label: '流水' },
+  { path: '/summary', label: '汇总' },
+  { path: '/details', label: '明细' },
 ]
 
 export default function NavBar() {

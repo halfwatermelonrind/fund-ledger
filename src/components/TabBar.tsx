@@ -1,9 +1,11 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Pencil, ChartLine } from 'lucide-react'
+import { Plus, Grid3X3, ChartLine, Info } from 'lucide-react'
 
 const tabs = [
-  { path: '/transactions', label: '交易录入', Icon: Pencil },
-  { path: '/positions', label: '持仓展示', Icon: ChartLine },
+  { path: '/entry', label: '录入', Icon: Plus },
+  { path: '/txlog', label: '流水', Icon: Grid3X3 },
+  { path: '/summary', label: '汇总', Icon: ChartLine },
+  { path: '/details', label: '明细', Icon: Info },
 ]
 
 export default function TabBar() {
