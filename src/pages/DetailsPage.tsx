@@ -47,10 +47,13 @@ function PositionCalculator({ pos, onClose }: { pos: Position; onClose: () => vo
 
   return (
     <div className="fixed inset-0 bg-black/40 z-[1500] flex items-end" onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="bg-surface rounded-t-xl w-full max-h-[85vh] overflow-y-auto p-5 pb-[calc(20px+env(safe-area-inset-bottom,0))]">
+      <div className="bg-surface rounded-t-xl w-full max-w-[100vw] max-h-[85vh] overflow-y-auto p-4 pb-[calc(16px+env(safe-area-inset-bottom,0))]">
         <div className="w-9 h-1 bg-border rounded-sm mx-auto mb-4" />
         <h3 className="text-[17px] font-semibold mb-4 text-center">调仓计算器</h3>
-        <div className="text-xs text-muted mb-4">当前：{pos.fundName} | 市值 {money(pos.marketValue)} | 成本 {money(pos.totalCost)}</div>
+        <div className="text-xs text-muted mb-4 leading-relaxed">
+          当前：{pos.fundName}<br/>
+          市值 {money(pos.marketValue)} | 成本 {money(pos.totalCost)} | 浮动盈亏 <span className={pnlColor(pos.totalProfitRate)}>{percent(pos.totalProfitRate)}%</span>
+        </div>
 
         <div className="flex gap-1 bg-bg rounded-md p-1 mb-4">
           <button className={`flex-1 py-2 text-sm font-medium rounded-md border-0 ${opType === 'buy' ? 'bg-surface text-accent shadow-sm' : 'text-muted'}`} onClick={() => setOpType('buy')}>买入</button>
@@ -58,20 +61,20 @@ function PositionCalculator({ pos, onClose }: { pos: Position; onClose: () => vo
         </div>
 
         {opType === 'buy' ? (
-          <div className="mb-3.5"><label className="block text-[13px] font-medium mb-1">买入金额（元）</label><input className="w-full h-10 px-3 text-sm font-mono border border-border rounded-sm outline-none focus:border-accent" type="number" step="0.01" value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} placeholder="输入金额" /></div>
+          <div className="mb-3.5"><label className="block text-[13px] font-medium mb-1">买入金额（元）</label><input className="w-full h-10 px-3 text-base font-mono border border-border rounded-sm outline-none focus:border-accent" type="number" step="0.01" value={buyAmount} onChange={(e) => setBuyAmount(e.target.value)} placeholder="输入金额" /></div>
         ) : (
-          <div className="mb-3.5"><label className="block text-[13px] font-medium mb-1">卖出份额</label><input className="w-full h-10 px-3 text-sm font-mono border border-border rounded-sm outline-none focus:border-accent" type="number" step="0.01" value={sellShares} onChange={(e) => setSellShares(e.target.value)} placeholder="输入份额" /></div>
+          <div className="mb-3.5"><label className="block text-[13px] font-medium mb-1">卖出份额</label><input className="w-full h-10 px-3 text-base font-mono border border-border rounded-sm outline-none focus:border-accent" type="number" step="0.01" value={sellShares} onChange={(e) => setSellShares(e.target.value)} placeholder="输入份额" /></div>
         )}
-        <div className="mb-3.5"><label className="block text-[13px] font-medium mb-1">交易费率（%）</label><input className="w-full h-10 px-3 text-sm font-mono border border-border rounded-sm outline-none focus:border-accent" type="number" step="0.01" value={feeRate} onChange={(e) => setFeeRate(e.target.value)} /></div>
+        <div className="mb-3.5"><label className="block text-[13px] font-medium mb-1">交易费率（%）</label><input className="w-full h-10 px-3 text-base font-mono border border-border rounded-sm outline-none focus:border-accent" type="number" step="0.01" value={feeRate} onChange={(e) => setFeeRate(e.target.value)} /></div>
 
         {result && (
-          <div className="bg-accent-light rounded-md p-3.5 mt-4 space-y-2">
-            <div className="flex justify-between text-[13px]"><span>调仓后份额</span><span className="font-mono font-semibold">{shares(result.newShares)}</span></div>
-            <div className="flex justify-between text-[13px]"><span>调仓后成本</span><span className="font-mono font-semibold">{money(result.newCost)}</span></div>
-            <div className="flex justify-between text-[13px]"><span>调仓后成本单价</span><span className="font-mono font-semibold">{fmtNav(result.newAvgCost)}</span></div>
-            <div className="flex justify-between text-[13px]"><span>成本 vs 净值</span><span className={`font-mono font-semibold ${result.costVsNav > 0 ? 'text-loss' : result.costVsNav < 0 ? 'text-gain' : ''}`}>{percent(result.costVsNav * 100)}%</span></div>
-            <div className="flex justify-between text-[13px]"><span>调仓后盈亏比例</span><span className={`font-mono font-semibold ${pnlColor(result.totalRate)}`}>{percent(result.totalRate)}%</span></div>
-            <div className="flex justify-between text-[13px]"><span>盈亏比例变化</span><span className={`font-mono font-semibold ${pnlColor(result.totalRate - result.oldRate)}`}>{percent(result.totalRate - result.oldRate)}%</span></div>
+          <div className="bg-accent-light rounded-md p-3.5 mt-4 space-y-2 overflow-hidden">
+            <div className="flex justify-between text-[12px] gap-2"><span className="shrink-0">调仓后份额</span><span className="font-mono font-semibold truncate">{shares(result.newShares)}</span></div>
+            <div className="flex justify-between text-[12px] gap-2"><span className="shrink-0">调仓后成本</span><span className="font-mono font-semibold truncate">{money(result.newCost)}</span></div>
+            <div className="flex justify-between text-[12px] gap-2"><span className="shrink-0">调仓后成本单价</span><span className="font-mono font-semibold truncate">{fmtNav(result.newAvgCost)}</span></div>
+            <div className="flex justify-between text-[12px] gap-2"><span className="shrink-0">成本 vs 净值</span><span className={`font-mono font-semibold truncate ${result.costVsNav > 0 ? 'text-loss' : result.costVsNav < 0 ? 'text-gain' : ''}`}>{percent(result.costVsNav * 100)}%</span></div>
+            <div className="flex justify-between text-[12px] gap-2"><span className="shrink-0">调仓后盈亏比例</span><span className={`font-mono font-semibold truncate ${pnlColor(result.totalRate)}`}>{percent(result.totalRate)}%</span></div>
+            <div className="flex justify-between text-[12px] gap-2"><span className="shrink-0">盈亏比例变化</span><span className={`font-mono font-semibold truncate ${pnlColor(result.totalRate - result.oldRate)}`}>{percent(result.totalRate - result.oldRate)}%</span></div>
             <div className="text-[11px] text-muted pt-1">* 仅供模拟测算，不产生真实交易记录</div>
           </div>
         )}
