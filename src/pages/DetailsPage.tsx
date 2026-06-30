@@ -123,6 +123,7 @@ export default function DetailsPage() {
       let va: number, vb: number
       if (sortKey === 'mv') { va = a.marketValue; vb = b.marketValue }
       else if (sortKey === 'rate') { va = a.totalProfitRate; vb = b.totalProfitRate }
+      else if (sortKey === 'navChange') { va = a.navChange ?? 0; vb = b.navChange ?? 0 }
       else { va = a.estimateChange ?? 0; vb = b.estimateChange ?? 0 }
       return sortDir * (va - vb)
     })
@@ -153,9 +154,10 @@ export default function DetailsPage() {
   ]
 
   const sortPills = [
-    { key: 'mv', label: `持仓市值 ${sortKey === 'mv' ? (sortDir === -1 ? '↓' : '↑') : ''}` },
-    { key: 'rate', label: `盈亏比例 ${sortKey === 'rate' ? (sortDir === -1 ? '↓' : '↑') : ''}` },
-    { key: 'change', label: `当日涨跌 ${sortKey === 'change' ? (sortDir === -1 ? '↓' : '↑') : ''}` },
+    { key: 'mv', label: `市值 ${sortKey === 'mv' ? (sortDir === -1 ? '↓' : '↑') : ''}` },
+    { key: 'rate', label: `盈亏比 ${sortKey === 'rate' ? (sortDir === -1 ? '↓' : '↑') : ''}` },
+    { key: 'change', label: `预估涨跌 ${sortKey === 'change' ? (sortDir === -1 ? '↓' : '↑') : ''}` },
+    { key: 'navChange', label: `确认涨跌 ${sortKey === 'navChange' ? (sortDir === -1 ? '↓' : '↑') : ''}` },
   ]
 
   return (
@@ -189,13 +191,13 @@ export default function DetailsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="text-[15px] font-semibold leading-snug">{p.fundName}</div>
                     <div className="text-[11px] text-muted">{p.fundCode}</div>
-                    <div className="flex items-baseline gap-1.5 mt-1.5 flex-wrap">
+                    <div className="flex items-baseline gap-1 mt-1.5 whitespace-nowrap overflow-x-auto">
                       <span className={`text-lg font-bold font-mono ${pnlColor(p.totalProfitRate)}`}>{percent(p.totalProfitRate)}%</span>
                       <span className="text-[10px] text-muted">总盈亏</span>
-                      <span className="text-border">|</span>
+                      <span className="text-border mx-0.5">|</span>
                       <span className={`text-[13px] font-mono ${pnlColor(p.estimateChange ?? 0)}`}>{p.estimateChange != null ? `${percent(p.estimateChange)}%` : '--'}</span>
                       <span className="text-[10px] text-muted">预估</span>
-                      <span className="text-border">|</span>
+                      <span className="text-border mx-0.5">|</span>
                       <span className={`text-[13px] font-mono ${pnlColor(p.navChange ?? 0)}`}>{p.navChange != null ? `${percent(p.navChange)}%` : '--'}</span>
                       <span className="text-[10px] text-muted">确认</span>
                     </div>

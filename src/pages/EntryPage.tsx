@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { TransactionType } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { fetchLatestNav } from '../services/fundData'
@@ -22,11 +22,32 @@ const emptyForm: FormState = {
 }
 
 export default function EntryPage() {
-  const { positions, addTransaction, updateTransaction } = useFundStore()
+  const { positions, transactions, addTransaction, updateTransaction } = useFundStore()
   const [form, setForm] = useState<FormState>(emptyForm)
   const [txType, setTxType] = useState<TransactionType>('buy')
   const [editId, setEditId] = useState<string | null>(null)
   const [lookingUp, setLookingUp] = useState(false)
+
+  // Load edit target from sessionStorage (set by TxLogPage)
+  useEffect(() => {
+    const id = sessionStorage.getItem('edit-tx-id')
+    if (!id) return
+    sessionStorage.removeItem('edit-tx-id')
+    const tx = transactions.find((t) => t.id === id)
+    if (!tx) return
+    setEditId(tx.id)
+    setTxType(tx.type)
+    setForm({
+      fundCode: tx.fundCode, fundName: tx.fundName, tradeDate: tx.tradeDate,
+      nav: tx.nav != null ? String(tx.nav) : '',
+      buyAmount: tx.type === 'buy' && tx.amount ? String(tx.amount) : '',
+      sellShares: tx.type === 'sell' && tx.shares ? String(tx.shares) : '',
+      dividendAmount: tx.type === 'dividend_cash' && tx.amount ? String(tx.amount) : '',
+      reinvestAmount: tx.type === 'dividend_reinvest' && tx.amount ? String(tx.amount) : '',
+      channel: tx.channel, feeRate: String(tx.feeRate * 100),
+      fee: tx.fee != null ? String(tx.fee) : '',
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const autoFee = useMemo(() => {
     const rate = parseFloat(form.feeRate) / 100 || 0

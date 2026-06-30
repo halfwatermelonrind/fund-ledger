@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Download, Upload, Trash2, FolderOpen } from 'lucide-react'
 import NavBar from './components/NavBar'
 import TabBar from './components/TabBar'
@@ -24,6 +24,8 @@ function App() {
 
 function AppShell() {
   const { exportData, importData, clearAllData, transactions } = useFundStore()
+  const location = useLocation()
+  const isEntryPage = location.pathname === '/entry'
 
   const [clearOpen, setClearOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -99,22 +101,24 @@ function AppShell() {
       {/* PC top nav */}
       <NavBar />
 
-      {/* Action bar (import/export/clear) */}
-      <div className="flex items-center justify-end gap-2 px-4 pt-3 pc:px-6 pc:pt-4">
-        <Button variant="secondary" size="xs" onClick={() => setImportOpen(true)} title="批量导入已有持仓">
-          <FolderOpen className="w-3.5 h-3.5" /> 初始化
-        </Button>
-        <Button variant="secondary" size="xs" onClick={handleExport}>
-          <Download className="w-3.5 h-3.5" /> 导出
-        </Button>
-        <Button variant="secondary" size="xs" onClick={handleImportClick}>
-          <Upload className="w-3.5 h-3.5" /> 导入
-        </Button>
-        <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
-        <Button variant="danger" size="xs" onClick={() => setClearOpen(true)} title="清除所有本地数据">
-          <Trash2 className="w-3.5 h-3.5" /> 清空
-        </Button>
-      </div>
+      {/* Action bar — only on entry page */}
+      {isEntryPage && (
+        <div className="flex items-center justify-end gap-2 px-4 pt-3 pc:px-6 pc:pt-4">
+          <Button variant="secondary" size="xs" onClick={() => setImportOpen(true)} title="批量导入已有持仓">
+            <FolderOpen className="w-3.5 h-3.5" /> 初始化
+          </Button>
+          <Button variant="secondary" size="xs" onClick={handleExport}>
+            <Download className="w-3.5 h-3.5" /> 导出
+          </Button>
+          <Button variant="secondary" size="xs" onClick={handleImportClick}>
+            <Upload className="w-3.5 h-3.5" /> 导入
+          </Button>
+          <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+          <Button variant="danger" size="xs" onClick={() => setClearOpen(true)} title="清除所有本地数据">
+            <Trash2 className="w-3.5 h-3.5" /> 清空
+          </Button>
+        </div>
+      )}
 
       {/* Main content */}
       <main className="flex-1 p-4 pc:p-6 pc:pb-6 pb-20">

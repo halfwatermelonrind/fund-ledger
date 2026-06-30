@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { Transaction } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { showToast } from '../components/Toast'
@@ -19,7 +20,13 @@ export default function TxLogPage() {
   const storeNavCache = useFundStore((s) => s.navCache)
   const deleteTransaction = useFundStore((s) => s.deleteTransaction)
   const batchFillNav = useFundStore((s) => s.batchFillNav)
+  const navigate = useNavigate()
   const isPC = typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
+
+  function setEditTx(tx: Transaction) {
+    sessionStorage.setItem('edit-tx-id', tx.id)
+    navigate('/entry')
+  }
 
   const { transactions } = useMemo(() => {
     let txs = storeTransactions
@@ -133,7 +140,10 @@ export default function TxLogPage() {
                       {t.fee != null && <><dt className="text-muted">手续费</dt><dd className="font-mono">{money(t.fee)} 元</dd></>}
                     </dl>
                     <div className="flex gap-2 mt-3">
-                      {isPending && <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); setBackfillId(t.id); setBackfillNav('') }}>回填</Button>}
+                      {isPending
+                        ? <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); setBackfillId(t.id); setBackfillNav('') }}>回填</Button>
+                        : <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); setEditTx(t) }}>编辑</Button>
+                      }
                       <Button variant="danger" size="xs" onClick={(e) => { e.stopPropagation(); setDeleteId(t.id) }}>删除</Button>
                     </div>
                   </div>
