@@ -38,7 +38,7 @@ const emptyForm: FormState = {
   channel: '支付宝', feeRate: '0.15', fee: '',
 }
 
-const channels = ['支付宝', '天天基金', '理财通', '招商银行', '平安银行', '兴业银行', '交通银行']
+const channels = ['支付宝', '天天基金', '理财通', '招商银行', '平安银行', '兴业银行', '交通银行', '汇丰银行', '建设银行']
 
 const filterPills = [
   { key: 'all', label: '全部' },

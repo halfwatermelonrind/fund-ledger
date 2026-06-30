@@ -7,7 +7,7 @@ import Button from '../components/Button'
 import TypeTabs from '../components/TypeTabs'
 import { money, shares } from '../utils/format'
 
-const CHANNELS = ['支付宝', '天天基金', '理财通', '招商银行', '平安银行', '兴业银行', '交通银行']
+const CHANNELS = ['支付宝', '天天基金', '理财通', '招商银行', '平安银行', '兴业银行', '交通银行', '汇丰银行', '建设银行']
 
 interface FormState {
   fundCode: string; fundName: string; tradeDate: string; nav: string

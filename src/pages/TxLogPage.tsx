@@ -107,7 +107,7 @@ export default function TxLogPage() {
             const confirmed = !isPending
             const amtCls = confirmed ? 'text-accent' : 'text-warn'
             const amountDisplay = t.type === 'sell'
-              ? (t.shares != null ? `${shares(t.shares)} 份` : '—')
+              ? (t.amount != null ? `${money(t.amount)} 元` : (t.shares != null ? `${shares(t.shares)} 份` : '—'))
               : (t.amount != null ? `${money(t.amount)} 元` : '—')
             const expanded = expandedTx === t.id
             return (
