@@ -191,15 +191,15 @@ export default function DetailsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="text-[15px] font-semibold leading-snug">{p.fundName}</div>
                     <div className="text-[11px] text-muted">{p.fundCode}</div>
-                    <div className="flex items-baseline gap-1 mt-1.5 whitespace-nowrap overflow-x-auto">
-                      <span className={`text-lg font-bold font-mono ${pnlColor(p.totalProfitRate)}`}>{percent(p.totalProfitRate)}%</span>
-                      <span className="text-[10px] text-muted">总盈亏</span>
-                      <span className="text-border mx-0.5">|</span>
-                      <span className={`text-[13px] font-mono ${pnlColor(p.estimateChange ?? 0)}`}>{p.estimateChange != null ? `${percent(p.estimateChange)}%` : '--'}</span>
-                      <span className="text-[10px] text-muted">预估</span>
-                      <span className="text-border mx-0.5">|</span>
-                      <span className={`text-[13px] font-mono ${pnlColor(p.navChange ?? 0)}`}>{p.navChange != null ? `${percent(p.navChange)}%` : '--'}</span>
-                      <span className="text-[10px] text-muted">确认</span>
+                    <div className="flex items-baseline gap-1 mt-1.5 flex-wrap">
+                      <span className={`text-lg font-bold font-mono shrink-0 ${pnlColor(p.totalProfitRate)}`}>{percent(p.totalProfitRate)}%</span>
+                      <span className="text-[10px] text-muted shrink-0">总盈亏</span>
+                      <span className="text-border mx-0.5 shrink-0">|</span>
+                      <span className={`text-[13px] font-mono shrink-0 ${pnlColor(p.estimateChange ?? 0)}`}>{p.estimateChange != null ? `${percent(p.estimateChange)}%` : '--'}</span>
+                      <span className="text-[10px] text-muted shrink-0">预估</span>
+                      <span className="text-border mx-0.5 shrink-0">|</span>
+                      <span className={`text-[13px] font-mono shrink-0 ${pnlColor(p.navChange ?? 0)}`}>{p.navChange != null ? `${percent(p.navChange)}%` : '--'}</span>
+                      <span className="text-[10px] text-muted shrink-0">确认</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
