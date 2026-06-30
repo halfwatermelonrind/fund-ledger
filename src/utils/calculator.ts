@@ -208,7 +208,8 @@ export interface NavEntry {
   date: string  // NAV date (jzrq)
   /** Real-time estimate (display only, does not affect P&L) */
   estimate?: number
-  change?: number
+  change?: number   // 预估涨跌幅 (gszzl)
+  navChange?: number // 确认净值涨跌幅 (dwjz day-over-day %)
   time?: string
 }
 
@@ -292,6 +293,7 @@ export function aggregatePositions(
 
       estimateNav:   nd?.estimate,
       estimateChange: nd?.change,
+      navChange:      nd?.navChange,
       estimateTime:  nd?.time,
 
       unrealizedProfit,

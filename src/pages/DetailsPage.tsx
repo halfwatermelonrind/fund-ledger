@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { Transaction, Position } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { aggregatePositions } from '../utils/calculator'
@@ -105,9 +105,17 @@ export default function DetailsPage() {
 
   const [sortKey, setSortKey] = useState<string>('mv')
   const [sortDir, setSortDir] = useState<1 | -1>(-1)
+  const [updateTime, setUpdateTime] = useState('')
   const [calculatorPos, setCalculatorPos] = useState<Position | null>(null)
   const [expandedCode, setExpandedCode] = useState<string | null>(null)
   const [clearedOpen, setClearedOpen] = useState(false)
+
+  // Auto-refresh valuations on mount
+  useEffect(() => {
+    const codes = [...new Set(txs.map((t) => t.fundCode))]
+    if (codes.length === 0) return
+    refreshLatestNav(codes).then(() => setUpdateTime(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sortedActive = useMemo(() => {
     const list = [...activePositions]
@@ -153,8 +161,11 @@ export default function DetailsPage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-base font-semibold tracking-wider text-fg">持仓明细</h2>
-        <Button size="sm" onClick={() => refreshLatestNav()}>刷新估值</Button>
+        <div>
+          <h2 className="text-base font-semibold tracking-wider text-fg">持仓明细</h2>
+          {updateTime && <span className="text-[11px] text-muted">数据更新于 {updateTime}</span>}
+        </div>
+        <Button size="sm" onClick={() => refreshLatestNav().then(() => setUpdateTime(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })))}>刷新估值</Button>
       </div>
 
       {/* Mobile sort bar */}
@@ -183,7 +194,10 @@ export default function DetailsPage() {
                       <span className="text-[10px] text-muted">总盈亏</span>
                       <span className="text-border">|</span>
                       <span className={`text-[13px] font-mono ${pnlColor(p.estimateChange ?? 0)}`}>{p.estimateChange != null ? `${percent(p.estimateChange)}%` : '--'}</span>
-                      <span className="text-[10px] text-muted">今日</span>
+                      <span className="text-[10px] text-muted">预估</span>
+                      <span className="text-border">|</span>
+                      <span className={`text-[13px] font-mono ${pnlColor(p.navChange ?? 0)}`}>{p.navChange != null ? `${percent(p.navChange)}%` : '--'}</span>
+                      <span className="text-[10px] text-muted">确认</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0">

@@ -149,6 +149,7 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   let date = ''
   let estimate: number | undefined
   let change: number | undefined
+  let navChange: number | undefined
   let time: string | undefined
 
   // ---- Step 1: 天天基金 JSONP (fast, includes real-time estimate) ----
@@ -192,17 +193,23 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
       const trend = (window as any).Data_netWorthTrend as NetWorthPoint[] | undefined
 
       if (eastName && trend && trend.length > 0) {
-        if (!jsonpOk) name = eastName  // use Eastmoney name if JSONP didn't provide one
+        if (!jsonpOk) name = eastName
 
         const latest = trend[trend.length - 1]
         const d = new Date(latest.x + 8 * 60 * 60 * 1000)
         const eastDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 
-        // Use Eastmoney NAV if it's more recent, or if JSONP failed entirely
         if (!jsonpOk || eastDate > date) {
           nav = latest.y
           date = eastDate
-          console.log(`[fundData] Updated NAV from Eastmoney: ${name} ${date} NAV=${nav}`)
+        }
+
+        // Compute confirmed NAV day-over-day change from last 2 entries
+        if (trend.length >= 2) {
+          const prev = trend[trend.length - 2]
+          if (prev.y > 0) {
+            navChange = Math.round((latest.y - prev.y) / prev.y * 10000) / 100
+          }
         }
       }
     } catch (_eastErr) {
@@ -217,7 +224,7 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     throw new Error(`无法获取基金 ${fundCode} 的数据`)
   }
 
-  return { name, nav, date, estimate, change, time }
+  return { name, nav, date, estimate, change, navChange, time }
 }
 
 // ============================================================

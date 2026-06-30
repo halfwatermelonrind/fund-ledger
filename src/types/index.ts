@@ -50,6 +50,7 @@ export interface Position {
   // real-time estimate (display only)
   estimateNav?: number
   estimateChange?: number
+  navChange?: number      // 确认净值涨跌幅 (dwjz day-over-day %)
   estimateTime?: string
 
   // P&L breakdown
@@ -68,7 +69,8 @@ export interface FundNavData {
   nav: number // dwjz
   date: string // jzrq
   estimate?: number // gsz
-  change?: number // gszzl
+  change?: number // gszzl (预估涨跌幅)
+  navChange?: number // 确认净值涨跌幅 (dwjz day-over-day)
   time?: string // gztime
 }
 
