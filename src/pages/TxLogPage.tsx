@@ -102,7 +102,10 @@ export default function TxLogPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-base font-semibold tracking-wider text-fg">交易流水</h2>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-base font-semibold tracking-wider text-fg">交易流水</h2>
+        {pendingCount > 0 && <Button variant="warn" size="sm" onClick={handleBatchBackfill}>一键回填净值 ({pendingCount})</Button>}
+      </div>
       <div className="mb-1"><FilterPills pills={filterPills} active={filter} onChange={setFilter} /></div>
 
       {/* ---- Mobile Card List ---- */}
@@ -157,11 +160,6 @@ export default function TxLogPage() {
       {/* ---- PC Table ---- */}
       {isPC && (
         <DataTable columns={columns} data={filteredTxs} rowKey={(t) => t.id} emptyText="暂无交易记录，请先录入" />
-      )}
-
-      {/* Batch backfill */}
-      {pendingCount > 0 && (
-        <div className="text-center"><Button variant="warn" onClick={handleBatchBackfill}>一键回填净值 ({pendingCount})</Button></div>
       )}
 
       {/* Backfill Modal */}

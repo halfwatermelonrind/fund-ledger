@@ -6,6 +6,7 @@ import { isTradingHours } from '../services/fundData'
 import { money, moneySigned, percent, pnlColor } from '../utils/format'
 import type { NavEntry } from '../utils/calculator'
 import SummaryCards from '../components/SummaryCards'
+import Button from '../components/Button'
 import type { SummarySlot } from '../components/SummaryCards'
 
 export default function SummaryPage() {
@@ -49,21 +50,23 @@ export default function SummaryPage() {
     const totalRate = totalCost > 0 ? (totalPnL / totalCost * 100) : 0
 
     return [
-      { label: '总市值', value: `${money(totalMv)} 元` },
-      { label: '总成本', value: `${money(totalCost)} 元` },
-      { label: trading ? '当日预估盈亏' : '当日预估（休市）', value: trading ? `${moneySigned(dailyEstimate)} 元` : '--', valueClass: trading ? pnlColor(dailyEstimate) : 'text-flat' },
-      { label: '总浮动盈亏', value: `${moneySigned(floatPnL)} 元`, valueClass: pnlColor(floatPnL) },
-      { label: '总已实现盈亏', value: `${moneySigned(realized)} 元`, valueClass: pnlColor(realized) },
-      { label: '总盈亏', value: `${moneySigned(totalPnL)} 元`, valueClass: pnlColor(totalPnL) },
-      { label: '持仓盈亏比例', value: `${percent(totalRate)}%`, valueClass: pnlColor(totalRate) },
+      { label: '总市值（元）', value: money(totalMv) },
+      { label: '总成本（元）', value: money(totalCost) },
+      { label: trading ? '当日预估盈亏（元）' : '当日预估（休市）', value: trading ? moneySigned(dailyEstimate) : '--', valueClass: trading ? pnlColor(dailyEstimate) : 'text-flat' },
+      { label: '总浮动盈亏（元）', value: moneySigned(floatPnL), valueClass: pnlColor(floatPnL) },
+      { label: '总已实现盈亏（元）', value: moneySigned(realized), valueClass: pnlColor(realized) },
+      { label: '总盈亏（元）', value: moneySigned(totalPnL), valueClass: pnlColor(totalPnL) },
+      { label: '持仓盈亏比例（%）', value: percent(totalRate), valueClass: pnlColor(totalRate) },
     ]
   }, [positions, trading])
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-base font-semibold tracking-wider text-fg">持仓汇总</h2>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="text-base font-semibold tracking-wider text-fg">持仓汇总</h2>
+        <Button variant="primary" size="sm" onClick={() => refreshLatestNav()}>刷新估值</Button>
+      </div>
       <SummaryCards items={summary} />
-      <div className="text-center"><button className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', height: 40, padding: '0 20px', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 4, cursor: 'pointer', background: 'var(--accent)', color: '#fff' }} onClick={() => refreshLatestNav()}>刷新估值</button></div>
       {positions.some((p) => p.estimateTime) && <div className="text-[11px] text-muted text-center">{(() => { const p = positions.find((p) => p.estimateTime); return p?.estimateTime ? `估算于 ${p.estimateTime.split(' ')[1] ?? p.estimateTime}` : '' })()}</div>}
     </div>
   )
