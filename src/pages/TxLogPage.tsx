@@ -14,6 +14,8 @@ import type { NavEntry } from '../utils/calculator'
 
 const TX_LABELS: Record<string, string> = { buy: '买入', sell: '卖出', dividend_cash: '现金分红', dividend_reinvest: '红利再投资' }
 const TX_COLORS: Record<string, string> = { buy: 'text-accent', sell: 'text-warn', dividend_cash: 'text-[#7e22ce]', dividend_reinvest: 'text-[#7e22ce]' }
+const TX_BADGE: Record<string, string> = { buy: 'bg-accent-light text-accent', sell: 'bg-warn-bg text-[#92400e]', dividend_cash: 'bg-purple-100 text-[#7e22ce]', dividend_reinvest: 'bg-purple-100 text-[#7e22ce]', init: 'bg-flat-bg text-flat' }
+const TX_BADGE_LABEL: Record<string, string> = { buy: '买入', sell: '卖出', dividend_cash: '分红', dividend_reinvest: '分红', init: '初始化' }
 
 export default function TxLogPage() {
   const storeTransactions = useFundStore((s) => s.transactions)
@@ -124,7 +126,10 @@ export default function TxLogPage() {
               <div key={t.id} className="bg-surface border border-border rounded-md overflow-hidden" onClick={() => setExpandedTx(expanded ? null : t.id)}>
                 <div className="p-3.5 flex items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="text-[15px] font-semibold leading-snug">{t.fundName}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-[15px] font-semibold leading-snug">{t.fundName}</div>
+                      <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full ${TX_BADGE[t.navSource === 'init' ? 'init' : t.type] ?? TX_BADGE.buy}`}>{TX_BADGE_LABEL[t.navSource === 'init' ? 'init' : t.type] ?? t.type}</span>
+                    </div>
                     <div className="text-[11px] text-muted">{t.fundCode}</div>
                   </div>
                   <div className="text-right shrink-0">

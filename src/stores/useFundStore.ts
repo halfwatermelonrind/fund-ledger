@@ -237,29 +237,7 @@ export const useFundStore = create<FundStore>()(
           })
         }
 
-        // Step 3: for funds WITH history but missing the specific trade date,
-        // also try latest NAV as per-date fallback
-        const codesNeedingDateFallback = new Set<string>()
-        for (const tx of pending) {
-          const dateNav = navByDate.get(tx.fundCode)
-          if (dateNav && !dateNav.has(tx.tradeDate) && !dateNav.has('__fallback__')) {
-            codesNeedingDateFallback.add(tx.fundCode)
-          }
-        }
-        if (codesNeedingDateFallback.size > 0) {
-          const fallbackCodes = [...codesNeedingDateFallback]
-          const latestResults = await batchRun(fallbackCodes, (code) => fetchLatestNav(code), 3)
-          latestResults.forEach((result, i) => {
-            if (result.status === 'fulfilled') {
-              const dateNav = navByDate.get(fallbackCodes[i])
-              if (dateNav) {
-                dateNav.set('__fallback__', result.value.nav)
-              }
-            }
-          })
-        }
-
-        // Apply backfill
+        // Apply backfill (exact date match only — no fallback for missing dates)
         let success = 0
         let fail = 0
 
@@ -273,16 +251,10 @@ export const useFundStore = create<FundStore>()(
               return tx
             }
 
-            // Try exact date match first, then fallback to latest NAV
-            let nav = dateNav.get(tx.tradeDate)
+            // Exact date match first; use __fallback__ only if no history data at all
+            let nav = dateNav.get(tx.tradeDate) ?? dateNav.get('__fallback__')
             if (nav == null) {
-              nav = dateNav.get('__fallback__')
-              console.log(`[store] batchFillNav: ${tx.fundCode} date ${tx.tradeDate} → fallback NAV=${nav}`)
-            } else {
-              console.log(`[store] batchFillNav: ${tx.fundCode} date ${tx.tradeDate} → exact match NAV=${nav}`)
-            }
-            if (nav == null) {
-              console.warn(`[store] batchFillNav: no NAV for ${tx.fundCode} on ${tx.tradeDate}`)
+              // No NAV for this date — skip, leave as pending (common for QDII with T+1 delay)
               return tx
             }
 
