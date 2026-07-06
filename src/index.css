@@ -20,8 +20,12 @@
     --loss-bg: #f0fdf4;
     --warn:    #f59e0b;
     --warn-bg: #fffbeb;
+    --warn-text: #92400e;
     --flat:    #9ca3af;
     --flat-bg: #f9fafb;
+    --reinvest: #7e22ce;
+    --reinvest-bg: #f3e8ff;
+    --row-hover: #f8fafc;
 
     --font-display: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
     --font-body:    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;

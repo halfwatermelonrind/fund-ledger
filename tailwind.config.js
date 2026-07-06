@@ -28,10 +28,15 @@ export default {
         warn: {
           DEFAULT: '#f59e0b',
           bg: '#fffbeb',
+          text: '#92400e',
         },
         flat: {
           DEFAULT: '#9ca3af',
           bg: '#f9fafb',
+        },
+        reinvest: {
+          DEFAULT: '#7e22ce',
+          bg: '#f3e8ff',
         },
       },
       fontFamily: {

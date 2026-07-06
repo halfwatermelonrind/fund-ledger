@@ -174,7 +174,7 @@ export default function DetailsPage() {
       {!isPC && (
         <div className="flex gap-2 flex-wrap">
           {sortPills.map((p) => (
-            <button key={p.key} className={`px-3.5 py-1.5 text-xs font-medium border rounded-full transition-colors ${sortKey === p.key ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border'}`} onClick={() => handleSort(p.key)}>{p.label}</button>
+            <button key={p.key} className={`px-3.5 py-1.5 min-h-10 text-xs font-medium border rounded-full transition-colors ${sortKey === p.key ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border'}`} onClick={() => handleSort(p.key)}>{p.label}</button>
           ))}
         </div>
       )}

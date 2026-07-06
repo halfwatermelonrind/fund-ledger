@@ -19,7 +19,7 @@ export default function TypeTabs({ active, onChange }: Props) {
         <button
           key={t.key}
           type="button"
-          className={`flex-1 py-2 px-1.5 text-[13px] pc:text-sm font-medium tracking-wider text-center border-none rounded-md transition-all duration-150 whitespace-nowrap cursor-pointer
+          className={`flex-1 py-2.5 min-h-[44px] px-1.5 text-[13px] pc:text-sm font-medium tracking-wider text-center border-none rounded-md transition-all duration-150 whitespace-nowrap cursor-pointer
             ${active === t.key ? 'bg-surface text-accent shadow-sm' : 'bg-transparent text-muted'}`}
           onClick={() => onChange(t.key)}
         >

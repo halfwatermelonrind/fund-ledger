@@ -27,7 +27,7 @@ const TX_LABELS: Record<string, string> = {
   buy: '买入', sell: '卖出', dividend_cash: '现金分红', dividend_reinvest: '红利再投资',
 }
 const TX_COLORS: Record<string, string> = {
-  buy: 'text-accent', sell: 'text-loss', dividend_cash: 'text-warn', dividend_reinvest: 'text-[#7e22ce]',
+  buy: 'text-accent', sell: 'text-loss', dividend_cash: 'text-warn', dividend_reinvest: 'text-reinvest',
 }
 
 // ---- Component ----

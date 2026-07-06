@@ -7,7 +7,7 @@ interface Props {
 
 const map: Record<Status, { label: string; cls: string }> = {
   confirmed: { label: '已确认', cls: 'bg-accent-light text-accent' },
-  pending:   { label: '待回填', cls: 'bg-warn-bg text-[#92400e]' },
+  pending:   { label: '待回填', cls: 'bg-warn-bg text-warn-text' },
   cleared:   { label: '已清仓', cls: 'bg-flat-bg text-flat' },
   init:      { label: '初始化', cls: 'bg-purple-100 text-purple-700' },
 }

@@ -16,7 +16,7 @@ export default function FilterPills({ pills, active, onChange }: Props) {
         <button
           key={p.key}
           type="button"
-          className={`px-3 py-1 text-xs font-medium tracking-wider border rounded-full cursor-pointer transition-all duration-150
+          className={`px-3 py-1.5 min-h-10 text-xs font-medium tracking-wider border rounded-full cursor-pointer transition-all duration-150
             ${active === p.key
               ? 'bg-accent text-white border-accent'
               : 'bg-surface text-muted border-border hover:border-accent hover:text-accent'}`}

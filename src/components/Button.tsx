@@ -18,9 +18,9 @@ const variantClass: Record<Variant, string> = {
 }
 
 const sizeClass: Record<Size, string> = {
-  xs: 'h-7 px-2 text-[11px] rounded-sm',
-  sm: 'h-8 px-3 text-xs',
-  md: 'h-10 px-5 text-sm',
+  xs: 'h-9 px-2.5 text-[11px] rounded-sm',   // 36px — inline rows
+  sm: 'h-10 px-3.5 text-xs',                  // 40px — secondary
+  md: 'h-11 px-5 text-sm',                    // 44px — primary
 }
 
 export default function Button({ variant = 'primary', size = 'md', className = '', children, disabled, ...rest }: Props) {

@@ -322,7 +322,7 @@ export default function TransactionsPage() {
       <span className="max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap block" title={t.fundName}>{t.fundName}</span>
     )},
     { key: 'type', title: '类型', render: (t) => {
-      const colors: Record<string, string> = { buy: 'text-accent', sell: 'text-loss', dividend_cash: 'text-warn', dividend_reinvest: 'text-[#7e22ce]' }
+      const colors: Record<string, string> = { buy: 'text-accent', sell: 'text-loss', dividend_cash: 'text-warn', dividend_reinvest: 'text-reinvest' }
       const labels: Record<string, string> = { buy: '买入', sell: '卖出', dividend_cash: '现金分红', dividend_reinvest: '红利再投资' }
       return <span className={`font-medium text-xs ${colors[t.type] ?? ''}`}>{labels[t.type] ?? t.type}</span>
     }},

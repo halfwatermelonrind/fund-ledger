@@ -13,8 +13,8 @@ import type { Column } from '../components/DataTable'
 import type { NavEntry } from '../utils/calculator'
 
 const TX_LABELS: Record<string, string> = { buy: '买入', sell: '卖出', dividend_cash: '现金分红', dividend_reinvest: '红利再投资' }
-const TX_COLORS: Record<string, string> = { buy: 'text-accent', sell: 'text-warn', dividend_cash: 'text-[#7e22ce]', dividend_reinvest: 'text-[#7e22ce]' }
-const TX_BADGE: Record<string, string> = { buy: 'bg-accent-light text-accent', sell: 'bg-warn-bg text-[#92400e]', dividend_cash: 'bg-purple-100 text-[#7e22ce]', dividend_reinvest: 'bg-purple-100 text-[#7e22ce]', init: 'bg-flat-bg text-flat' }
+const TX_COLORS: Record<string, string> = { buy: 'text-accent', sell: 'text-warn', dividend_cash: 'text-reinvest', dividend_reinvest: 'text-reinvest' }
+const TX_BADGE: Record<string, string> = { buy: 'bg-accent-light text-accent', sell: 'bg-warn-bg text-warn-text', dividend_cash: 'bg-reinvest-bg text-reinvest', dividend_reinvest: 'bg-reinvest-bg text-reinvest', init: 'bg-flat-bg text-flat' }
 const TX_BADGE_LABEL: Record<string, string> = { buy: '买入', sell: '卖出', dividend_cash: '分红', dividend_reinvest: '分红', init: '初始化' }
 
 export default function TxLogPage() {
