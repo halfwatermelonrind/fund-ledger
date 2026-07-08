@@ -6,6 +6,7 @@ const tabs = [
   { path: '/txlog', label: '流水' },
   { path: '/summary', label: '汇总' },
   { path: '/details', label: '明细' },
+  { path: '/signals', label: '信号' },
 ]
 
 export default function NavBar() {

@@ -11,6 +11,7 @@ import EntryPage from './pages/EntryPage'
 import TxLogPage from './pages/TxLogPage'
 import SummaryPage from './pages/SummaryPage'
 import DetailsPage from './pages/DetailsPage'
+import SignalPage from './pages/SignalPage'
 import { useFundStore } from './stores/useFundStore'
 import { aggregatePositions } from './utils/calculator'
 
@@ -128,6 +129,7 @@ function AppShell() {
           <Route path="/txlog" element={<TxLogPage />} />
           <Route path="/summary" element={<SummaryPage />} />
           <Route path="/details" element={<DetailsPage />} />
+          <Route path="/signals" element={<SignalPage />} />
         </Routes>
       </main>
 
