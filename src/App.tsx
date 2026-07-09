@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Download, Upload, Trash2, FolderOpen } from 'lucide-react'
 import NavBar from './components/NavBar'
 import TabBar from './components/TabBar'
@@ -17,9 +17,9 @@ import { aggregatePositions } from './utils/calculator'
 
 function App() {
   return (
-    <BrowserRouter basename="/fund-ledger/v2">
+    <HashRouter basename="/fund-ledger/v2">
       <AppShell />
-    </BrowserRouter>
+    </HashRouter>
   )
 }
 
