@@ -17,7 +17,7 @@ import { aggregatePositions } from './utils/calculator'
 
 function App() {
   return (
-    <HashRouter basename="/fund-ledger/v2">
+    <HashRouter>
       <AppShell />
     </HashRouter>
   )
