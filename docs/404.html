@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><title>Redirecting…</title>
+<script>
+  // GitHub Pages SPA fallback for both main and v2
+  var path = location.pathname;
+  if (path.indexOf('/fund-ledger/v2/') === 0) {
+    sessionStorage.redirect = path;
+    location.replace('/fund-ledger/v2/');
+  } else {
+    sessionStorage.redirect = path;
+    location.replace('/fund-ledger/');
+  }
+</script>
+</head>
+<body>Redirecting…</body>
+</html>
