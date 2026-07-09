@@ -1,0 +1,10 @@
+  <script>
+    // Restore path after 404.html fallback redirect
+    (function(){
+      var redirect = sessionStorage.redirect;
+      delete sessionStorage.redirect;
+      if (redirect && redirect !== location.pathname) {
+        history.replaceState(null, '', redirect);
+      }
+    })();
+  </script>

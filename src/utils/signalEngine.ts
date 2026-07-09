@@ -183,7 +183,11 @@ export function computeSignals(
     if (rMax === 0 && historyNavs?.[pos.fundCode]) {
       rMax = seedRMaxFromHistory(pos.fundCode, pos, transactions, historyNavs[pos.fundCode])
     }
-    updateRMax(pos.fundCode, rate) // always update if current > stored
+    // Update and sync local variable
+    if (rate > rMax) {
+      updateRMax(pos.fundCode, rate)
+      rMax = rate
+    }
 
     let r5Triggered = false
 
