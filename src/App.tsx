@@ -7,8 +7,7 @@ import { ToastContainer, showToast } from './components/Toast'
 import ConfirmDialog from './components/ConfirmDialog'
 import BatchImportModal from './components/BatchImportModal'
 import Button from './components/Button'
-import EntryPage from './pages/EntryPage'
-import TxLogPage from './pages/TxLogPage'
+import RecordPage from './pages/RecordPage'
 import SummaryPage from './pages/SummaryPage'
 import DetailsPage from './pages/DetailsPage'
 import SignalPage from './pages/SignalPage'
@@ -26,7 +25,7 @@ function App() {
 function AppShell() {
   const { exportData, importData, clearAllData, transactions } = useFundStore()
   const location = useLocation()
-  const isEntryPage = location.pathname === '/entry'
+  const isRecordPage = location.pathname === '/txlog'
 
   const [clearOpen, setClearOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -103,7 +102,7 @@ function AppShell() {
       <NavBar />
 
       {/* Action bar — only on entry page */}
-      {isEntryPage && (
+      {isRecordPage && (
         <div className="flex items-center justify-end gap-2 px-4 pt-3 pc:px-6 pc:pt-4">
           <Button variant="secondary" size="xs" onClick={() => setImportOpen(true)} title="批量导入已有持仓">
             <FolderOpen className="w-3.5 h-3.5" /> 初始化
@@ -124,9 +123,8 @@ function AppShell() {
       {/* Main content */}
       <main className="flex-1 p-4 pc:p-6 pc:pb-6 pb-20">
         <Routes>
-          <Route path="/" element={<Navigate to="/entry" replace />} />
-          <Route path="/entry" element={<EntryPage />} />
-          <Route path="/txlog" element={<TxLogPage />} />
+          <Route path="/" element={<Navigate to="/txlog" replace />} />
+          <Route path="/txlog" element={<RecordPage />} />
           <Route path="/summary" element={<SummaryPage />} />
           <Route path="/details" element={<DetailsPage />} />
           <Route path="/signals" element={<SignalPage />} />

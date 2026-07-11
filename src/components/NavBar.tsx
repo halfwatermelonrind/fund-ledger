@@ -2,8 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 
 const tabs = [
-  { path: '/entry', label: '录入' },
-  { path: '/txlog', label: '流水' },
+  { path: '/txlog', label: '记录' },
   { path: '/summary', label: '汇总' },
   { path: '/details', label: '明细' },
   { path: '/signals', label: '信号' },
