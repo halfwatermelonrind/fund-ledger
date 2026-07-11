@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import type { Transaction, Position } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { aggregatePositions } from '../utils/calculator'
+import { isTradingHours } from '../services/fundData'
 import Button from '../components/Button'
 import RefreshButton from '../components/RefreshButton'
 import DataTable from '../components/DataTable'
@@ -244,7 +245,7 @@ export default function DetailsPage() {
                 {pnlOpen && (
                   <div className="px-3.5 pb-3.5 border-t border-border pt-3">
                     {txs.filter((t: Transaction) => t.fundCode === p.fundCode && (t.type === 'buy' || t.type === 'sell') && t.nav != null && t.nav > 0).sort((a: Transaction, b: Transaction) => b.tradeDate.localeCompare(a.tradeDate)).map((t: Transaction) => {
-                      const refPrice = p.estimateNav ?? p.latestNav
+                      const refPrice = isTradingHours() ? (p.estimateNav ?? p.latestNav) : p.latestNav
                       const pct = refPrice > 0 ? ((refPrice - t.nav!) / t.nav! * 100) : 0
                       return (
                         <div key={t.id} className="flex items-center justify-between py-1.5 border-b border-dashed border-border last:border-b-0 text-xs">
