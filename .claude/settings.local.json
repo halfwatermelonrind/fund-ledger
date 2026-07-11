@@ -105,7 +105,9 @@
       "Bash(cp -r dist /tmp/v2-kb)",
       "Bash(cp -r /tmp/v2-kb/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-kb2)",
-      "Bash(cp -r /tmp/v2-kb2/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-kb2/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-kb3)",
+      "Bash(cp -r /tmp/v2-kb3/* docs/v2/)"
     ]
   }
 }
