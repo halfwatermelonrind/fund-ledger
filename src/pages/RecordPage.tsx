@@ -95,8 +95,7 @@ export default function RecordPage() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Fund lookup ----
-  async function handleFundBlur() {
-    const code = form.fundCode.trim()
+  async function lookupFundCode(code: string) {
     if (code.length !== 6 || !/^\d{6}$/.test(code)) return
     setLookingUp(true)
     try { const data = await fetchLatestNav(code); setForm((f) => ({ ...f, fundName: data.name })) }
@@ -200,7 +199,7 @@ export default function RecordPage() {
       <form onSubmit={handleSave}>
         <TypeTabs active={txType} onChange={(t) => { setTxType(t); setEditId(null) }} />
         <div className="grid grid-cols-2 gap-3">
-          <div className="mb-3.5 min-w-0"><label className="block text-[13px] font-medium text-fg mb-1">基金代码</label><input className="w-full h-11 px-3 text-base font-mono border border-border rounded-sm outline-none focus:border-accent" value={form.fundCode} onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, fundCode: v })); if (v.length === 6) handleFundBlur() }} placeholder="输入6位代码" maxLength={6} inputMode="numeric" required /></div>
+          <div className="mb-3.5 min-w-0"><label className="block text-[13px] font-medium text-fg mb-1">基金代码</label><input className="w-full h-11 px-3 text-base font-mono border border-border rounded-sm outline-none focus:border-accent" value={form.fundCode} onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 6); setForm((f) => ({ ...f, fundCode: v })); if (v.length === 6) lookupFundCode(v) }} placeholder="输入6位代码" maxLength={6} inputMode="numeric" required /></div>
           <div className="mb-3.5 min-w-0"><label className="block text-[13px] font-medium text-fg mb-1">基金名称</label><input className="w-full h-11 px-3 text-base border border-border rounded-sm outline-none focus:border-accent" value={form.fundName} onChange={(e) => setForm((f) => ({ ...f, fundName: e.target.value }))} placeholder={lookingUp ? '查询中…' : '自动联想'} readOnly={lookingUp} /></div>
         </div>
         {/* Date on its own row */}
@@ -293,7 +292,7 @@ export default function RecordPage() {
       {/* ---- Mobile Bottom Sheet Entry (swipe to dismiss) ---- */}
       {!isPC && sheetOpen && (
         <div className="fixed inset-0 bg-black/40 z-[1500] flex items-end" onClick={(e) => { if (e.target === e.currentTarget) { setSheetOpen(false); resetForm() } }}>
-          <div ref={sheetRef} className="bg-surface rounded-t-xl w-full max-h-[88vh] overflow-y-auto p-5 pb-[calc(20px+env(safe-area-inset-bottom,0))]">
+          <div ref={sheetRef} className="bg-surface rounded-t-xl w-full max-h-[88vh] overflow-y-auto overscroll-contain p-5 pb-[calc(20px+env(safe-area-inset-bottom,0))]" style={{ WebkitOverflowScrolling: 'touch' }}>
             <div className="flex items-center justify-between mb-4">
               <div className="w-9 h-1 bg-border rounded-sm" />
               <button className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:bg-bg transition-colors text-lg leading-none shrink-0" onClick={() => { setSheetOpen(false); resetForm() }} aria-label="关闭">×</button>
