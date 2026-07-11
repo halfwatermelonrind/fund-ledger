@@ -129,17 +129,19 @@ export default function SignalPage() {
         </button>
       </div>
 
-      {/* Rule filter */}
-      <div className="flex gap-2 flex-wrap">
+      {/* Rule filter — horizontally scrollable on mobile */}
+      <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
         {ALL_RULES.map((r) => {
           const count = r === '全部' ? signals.length : (ruleCounts[r] ?? 0)
+          const active = ruleFilter === r
           return (
             <button
               key={r}
-              className={`px-3 py-1 min-h-8 text-[11px] font-medium border rounded-full transition-colors ${ruleFilter === r ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border hover:border-accent hover:text-accent'}`}
+              className={`shrink-0 px-2.5 py-1 min-h-8 text-[11px] font-medium border rounded-full transition-colors whitespace-nowrap
+                ${active ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border'}`}
               onClick={() => setRuleFilter(r)}
             >
-              {r}{count > 0 && <span className="ml-1 opacity-70">({count})</span>}
+              {r}<span className={active ? 'opacity-80' : 'opacity-50'}>{count > 0 ? ` ${count}` : ''}</span>
             </button>
           )
         })}
