@@ -350,9 +350,10 @@ function evaluateR2(
   const currentNav = navCache[pos.fundCode]?.nav
   if (!currentNav || currentNav <= 0) return null
 
-  // Find the most recent BUY (including 'init' as buy)
+  // Find the most recent BUY (exclude init — they represent existing holdings, not real purchases)
   const buys = transactions
     .filter((t) => t.fundCode === pos.fundCode && (t.type === 'buy' || t.type === 'dividend_reinvest'))
+    .filter((t) => t.navSource !== 'init')
     .filter((t) => t.nav != null && t.nav > 0)
     .sort((a, b) => b.tradeDate.localeCompare(a.tradeDate))
 
