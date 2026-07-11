@@ -37,11 +37,28 @@ export default function SignalPage() {
     return { transactions: t, navCache: c }
   }, [storeTransactions, storeNavCache])
 
-  // Auto-refresh on mount + compute signals
+  // Show cached signals immediately, refresh silently in background
+  const [refreshing, setRefreshing] = useState(false)
   useEffect(() => {
     const codes = [...new Set(transactions.map((t) => t.fundCode))]
     if (codes.length === 0) { setLoading(false); return }
-    refreshLatestNav(codes).then(() => setLoading(false))
+
+    // Check if cache is fresh enough (today)
+    const today = new Date().toISOString().slice(0, 10)
+    const needRefresh = codes.some((c) => {
+      const entry = navCache[c]
+      return !entry || !entry.date || entry.date < today
+    })
+
+    if (!needRefresh) {
+      setLoading(false)
+      return
+    }
+
+    // Refresh in background — don't block rendering
+    setLoading(false)
+    setRefreshing(true)
+    refreshLatestNav(codes).finally(() => setRefreshing(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const signals = useMemo(() => {
@@ -61,7 +78,10 @@ export default function SignalPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-base font-semibold tracking-wider text-fg">交易信号</h2>
+      <div className="flex items-center gap-2 flex-wrap">
+        <h2 className="text-base font-semibold tracking-wider text-fg">交易信号</h2>
+        {refreshing && <span className="text-[11px] text-muted animate-pulse">刷新中…</span>}
+      </div>
 
       {/* Sub tabs */}
       <div className="flex gap-2">

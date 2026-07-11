@@ -81,7 +81,9 @@
       "Bash(cp -r dist /tmp/v2-signal-fix)",
       "Bash(cp -r /tmp/v2-signal-fix/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-r2)",
-      "Bash(cp -r /tmp/v2-r2/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-r2/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-opt)",
+      "Bash(cp -r /tmp/v2-opt/* docs/v2/)"
     ]
   }
 }
