@@ -101,7 +101,9 @@
       "Bash(cp -r dist /tmp/v2-close)",
       "Bash(cp -r /tmp/v2-close/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-pnl-fix)",
-      "Bash(cp -r /tmp/v2-pnl-fix/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-pnl-fix/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-kb)",
+      "Bash(cp -r /tmp/v2-kb/* docs/v2/)"
     ]
   }
 }

@@ -200,7 +200,7 @@ export default function RecordPage() {
       <form onSubmit={handleSave}>
         <TypeTabs active={txType} onChange={(t) => { setTxType(t); setEditId(null) }} />
         <div className="grid grid-cols-2 gap-3">
-          <div className="mb-3.5 min-w-0"><label className="block text-[13px] font-medium text-fg mb-1">基金代码</label><input className="w-full h-11 px-3 text-base font-mono border border-border rounded-sm outline-none focus:border-accent" value={form.fundCode} onChange={(e) => setForm((f) => ({ ...f, fundCode: e.target.value }))} onBlur={handleFundBlur} placeholder="输入6位代码" maxLength={6} required /></div>
+          <div className="mb-3.5 min-w-0"><label className="block text-[13px] font-medium text-fg mb-1">基金代码</label><input className="w-full h-11 px-3 text-base font-mono border border-border rounded-sm outline-none focus:border-accent" value={form.fundCode} onChange={(e) => { const v = e.target.value; setForm((f) => ({ ...f, fundCode: v })); if (v.length === 6) handleFundBlur() }} placeholder="输入6位代码" maxLength={6} inputMode="numeric" required /></div>
           <div className="mb-3.5 min-w-0"><label className="block text-[13px] font-medium text-fg mb-1">基金名称</label><input className="w-full h-11 px-3 text-base border border-border rounded-sm outline-none focus:border-accent" value={form.fundName} onChange={(e) => setForm((f) => ({ ...f, fundName: e.target.value }))} placeholder={lookingUp ? '查询中…' : '自动联想'} readOnly={lookingUp} /></div>
         </div>
         {/* Date on its own row */}
@@ -298,7 +298,7 @@ export default function RecordPage() {
               <div className="w-9 h-1 bg-border rounded-sm" />
               <button className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:bg-bg transition-colors text-lg leading-none shrink-0" onClick={() => { setSheetOpen(false); resetForm() }} aria-label="关闭">×</button>
             </div>
-            <h3 className="text-[17px] font-semibold mb-4 text-center">{editId ? '编辑交易' : '录入交易'}{form.fundCode && <span className="text-sm font-normal text-muted ml-2">· {form.fundCode}</span>}</h3>
+            <h3 className="text-[17px] font-semibold mb-4 text-center">{editId ? '编辑交易' : '录入交易'}</h3>
             <EntryForm />
           </div>
         </div>
