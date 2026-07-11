@@ -212,6 +212,10 @@ export function computeSignals(
     const r8Result = evaluateR8(pos, rate, buildDays)
     if (r8Result) signals.push(r8Result)
 
+    // ---- R2: 单笔5%止损 ----
+    const r2Result = evaluateR2(pos, transactions, navCache)
+    if (r2Result) signals.push(r2Result)
+
     // ---- R3: 浮盈加仓控制 ----
     const r3Result = evaluateR3(pos, rate, rMax)
     if (r3Result) signals.push(r3Result)
@@ -330,6 +334,46 @@ function evaluateR8(pos: Position, rate: number, buildDays: number): Signal | nu
       { label: '当前收益率', value: pnlText(rate), cls: pnlCls(rate) },
       { label: '建议操作', value: '减仓 50%' },
       { label: '风险', value: '若继续持仓到 12 个月，将触发清仓' },
+    ],
+  }
+}
+
+// ============================================================
+// R2: 单笔5%止损
+// ============================================================
+
+function evaluateR2(
+  pos: Position,
+  transactions: Transaction[],
+  navCache: Record<string, NavEntry>,
+): Signal | null {
+  const currentNav = navCache[pos.fundCode]?.nav
+  if (!currentNav || currentNav <= 0) return null
+
+  // Find the most recent BUY (including 'init' as buy)
+  const buys = transactions
+    .filter((t) => t.fundCode === pos.fundCode && (t.type === 'buy' || t.type === 'dividend_reinvest'))
+    .filter((t) => t.nav != null && t.nav > 0)
+    .sort((a, b) => b.tradeDate.localeCompare(a.tradeDate))
+
+  if (buys.length === 0) return null
+  const lastBuy = buys[0]
+  if (!lastBuy.nav) return null
+
+  const loss = ((currentNav - lastBuy.nav) / lastBuy.nav) * 100
+  if (loss > -5) return null  // not triggered
+
+  return {
+    type: 'action', dir: 'reduce', rule: 'R2', prio: '中',
+    fundCode: pos.fundCode, fundName: pos.fundName,
+    title: `最近加仓 ${lastBuy.tradeDate}（${lastBuy.nav.toFixed(4)}）跌至 ${currentNav.toFixed(4)}，跌幅 ${loss.toFixed(2)}%`,
+    detail: [
+      { label: '规则', value: '单笔加仓跌幅 ≥ 5% → 卖出该笔加仓' },
+      { label: '加仓日期', value: lastBuy.tradeDate },
+      { label: '加仓净值', value: lastBuy.nav.toFixed(4) },
+      { label: '当前净值', value: currentNav.toFixed(4) },
+      { label: '跌幅', value: `${loss.toFixed(2)}%`, cls: 'pnl-down' },
+      { label: '建议操作', value: '卖出该笔加仓的全部份额' },
     ],
   }
 }

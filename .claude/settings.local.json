@@ -79,7 +79,9 @@
       "Bash(cp -r /tmp/v2-nobase/* docs/v2/)",
       "Bash(curl -s https://halfwatermelonrind.github.io/fund-ledger/v2/assets/index-BpezOE5U.js)",
       "Bash(cp -r dist /tmp/v2-signal-fix)",
-      "Bash(cp -r /tmp/v2-signal-fix/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-signal-fix/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-r2)",
+      "Bash(cp -r /tmp/v2-r2/* docs/v2/)"
     ]
   }
 }
