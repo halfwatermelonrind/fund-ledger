@@ -44,10 +44,9 @@ export default function RecordPage() {
   const clearAllData = useFundStore((s) => s.clearAllData)
   const isPC = useIsPC()
 
-  // Import/export state + swipe
+  // Import/export state
   const fileInputRef = useRef<HTMLInputElement>(null)
   const sheetRef = useRef<HTMLDivElement>(null)
-  const touchStartY = useRef(0)
   const [clearOpen, setClearOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
 
@@ -294,14 +293,11 @@ export default function RecordPage() {
       {/* ---- Mobile Bottom Sheet Entry (swipe to dismiss) ---- */}
       {!isPC && sheetOpen && (
         <div className="fixed inset-0 bg-black/40 z-[1500] flex items-end" onClick={(e) => { if (e.target === e.currentTarget) { setSheetOpen(false); resetForm() } }}>
-          <div ref={sheetRef} className="bg-surface rounded-t-xl w-full max-h-[88vh] overflow-y-auto p-5 pb-[calc(20px+env(safe-area-inset-bottom,0))]"
-            onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY }}
-            onTouchMove={(e) => {
-              const dy = e.touches[0].clientY - touchStartY.current
-              if (dy > 80) { setSheetOpen(false); resetForm() }
-            }}
-          >
-            <div className="w-9 h-1 bg-border rounded-sm mx-auto mb-4" />
+          <div ref={sheetRef} className="bg-surface rounded-t-xl w-full max-h-[88vh] overflow-y-auto p-5 pb-[calc(20px+env(safe-area-inset-bottom,0))]">
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-9 h-1 bg-border rounded-sm" />
+              <button className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:bg-bg transition-colors text-lg leading-none shrink-0" onClick={() => { setSheetOpen(false); resetForm() }} aria-label="关闭">×</button>
+            </div>
             <h3 className="text-[17px] font-semibold mb-4 text-center">{editId ? '编辑交易' : '录入交易'}{form.fundCode && <span className="text-sm font-normal text-muted ml-2">· {form.fundCode}</span>}</h3>
             <EntryForm />
           </div>

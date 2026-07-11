@@ -97,7 +97,9 @@
       "Bash(cp -r dist /tmp/v2-record)",
       "Bash(cp -r /tmp/v2-record/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-swipe)",
-      "Bash(cp -r /tmp/v2-swipe/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-swipe/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-close)",
+      "Bash(cp -r /tmp/v2-close/* docs/v2/)"
     ]
   }
 }
