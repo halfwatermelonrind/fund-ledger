@@ -18,6 +18,20 @@ const TAG_CLS: Record<string, string> = {
 
 type SubTab = 'action' | 'watch'
 
+const ALL_RULES = ['全部', 'R1', 'R2', 'R3', 'R4', 'R5', 'R8']
+const SEEN_KEY = 'fund-ledger-signals-seen'
+
+function loadSeen(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY)
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch { return new Set() }
+}
+
+function saveSeen(keys: string[]) {
+  localStorage.setItem(SEEN_KEY, JSON.stringify(keys))
+}
+
 export default function SignalPage() {
   const storeTransactions = useFundStore((s) => s.transactions)
   const storeNavCache = useFundStore((s) => s.navCache)
@@ -25,10 +39,10 @@ export default function SignalPage() {
   const isPC = useIsPC()
 
   const [subTab, setSubTab] = useState<SubTab>('action')
+  const [ruleFilter, setRuleFilter] = useState('全部')
   const [expandedSig, setExpandedSig] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Local cache fallback
   const { transactions, navCache } = useMemo(() => {
     let t = storeTransactions; let c = storeNavCache
     if (t.length === 0) {
@@ -37,25 +51,17 @@ export default function SignalPage() {
     return { transactions: t, navCache: c }
   }, [storeTransactions, storeNavCache])
 
-  // Show cached signals immediately, refresh silently in background
+  // Background refresh
   const [refreshing, setRefreshing] = useState(false)
   useEffect(() => {
     const codes = [...new Set(transactions.map((t) => t.fundCode))]
     if (codes.length === 0) { setLoading(false); return }
-
-    // Check if cache is fresh enough (today)
     const today = new Date().toISOString().slice(0, 10)
     const needRefresh = codes.some((c) => {
       const entry = navCache[c]
       return !entry || !entry.date || entry.date < today
     })
-
-    if (!needRefresh) {
-      setLoading(false)
-      return
-    }
-
-    // Refresh in background — don't block rendering
+    if (!needRefresh) { setLoading(false); return }
     setLoading(false)
     setRefreshing(true)
     refreshLatestNav(codes).finally(() => setRefreshing(false))
@@ -66,9 +72,24 @@ export default function SignalPage() {
     return computeSignals(transactions, navCache)
   }, [transactions, navCache])
 
+  // Detect new signals vs last visit
+  const newKeys = useMemo(() => {
+    const seen = loadSeen()
+    const keys = signals.map((s) => sigKey(s))
+    const news = new Set(keys.filter((k) => !seen.has(k)))
+    saveSeen(keys)
+    return news
+  }, [signals])
+
   const actionSignals = useMemo(() => signals.filter((s) => s.type === 'action'), [signals])
   const watchSignals = useMemo(() => signals.filter((s) => s.type === 'watch'), [signals])
-  const displayed = subTab === 'action' ? actionSignals : watchSignals
+
+  // Apply rule filter + sub tab
+  const displayed = useMemo(() => {
+    let list = subTab === 'action' ? actionSignals : watchSignals
+    if (ruleFilter !== '全部') list = list.filter((s) => s.rule === ruleFilter)
+    return list
+  }, [subTab, ruleFilter, actionSignals, watchSignals])
 
   function sigKey(s: Signal) { return `${s.rule}-${s.fundCode}` }
 
@@ -99,9 +120,22 @@ export default function SignalPage() {
         </button>
       </div>
 
+      {/* Rule filter */}
+      <div className="flex gap-2 flex-wrap">
+        {ALL_RULES.map((r) => (
+          <button
+            key={r}
+            className={`px-3 py-1 min-h-8 text-[11px] font-medium border rounded-full transition-colors ${ruleFilter === r ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border hover:border-accent hover:text-accent'}`}
+            onClick={() => setRuleFilter(r)}
+          >
+            {r}
+          </button>
+        ))}
+      </div>
+
       {displayed.length === 0 && (
         <div className="text-center py-16 text-muted">
-          {subTab === 'action' ? '暂无操作信号 🎉' : '暂无观察提醒'}
+          {ruleFilter !== '全部' ? `暂无 ${ruleFilter} 信号` : subTab === 'action' ? '暂无操作信号 🎉' : '暂无观察提醒'}
         </div>
       )}
 
@@ -111,8 +145,9 @@ export default function SignalPage() {
           {displayed.map((s) => {
             const key = sigKey(s)
             const expanded = expandedSig === key
+            const isNew = newKeys.has(key)
             return (
-              <div key={key} className={`bg-surface rounded-lg shadow-sm overflow-hidden cursor-pointer ${expanded ? '' : ''}`} onClick={() => setExpandedSig(expanded ? null : key)}>
+              <div key={key} className={`bg-surface rounded-lg shadow-sm overflow-hidden cursor-pointer`} onClick={() => setExpandedSig(expanded ? null : key)}>
                 <div className="p-3.5 flex items-start gap-2.5">
                   <div className={`w-1 self-stretch rounded-sm shrink-0 ${BAR_CLS[s.dir]}`} />
                   <div className="flex-1 min-w-0">
@@ -120,6 +155,7 @@ export default function SignalPage() {
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0 ${TAG_CLS[s.dir]}`}>
                         {s.type === 'action' ? s.rule : s.prio}
                       </span>
+                      {isNew && <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-gain text-white shrink-0">新</span>}
                       <span className="text-[11px] text-muted truncate">{s.fundName} · {s.fundCode}</span>
                     </div>
                     <div className="text-sm font-semibold leading-snug">{s.title}</div>
@@ -163,6 +199,7 @@ export default function SignalPage() {
                   </td>
                   <td className="px-3 py-2.5">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${TAG_CLS[s.dir]}`}>{s.rule}</span>
+                    {newKeys.has(sigKey(s)) && <span className="ml-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-gain text-white">新</span>}
                   </td>
                   <td className="px-3 py-2.5 whitespace-nowrap">{s.fundName}<br/><span className="text-xs text-muted">{s.fundCode}</span></td>
                   <td className="px-3 py-2.5 text-sm">{s.title}</td>
