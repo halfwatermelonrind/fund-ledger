@@ -72,6 +72,7 @@ export default function RecordPage() {
 
   const positions = useMemo(() => aggregatePositions(transactions, navCache), [transactions, navCache])
 
+  const fundCodeRef = useRef<HTMLInputElement>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
   const [txType, setTxType] = useState<TransactionType>('buy')
   const [editId, setEditId] = useState<string | null>(null)
@@ -122,15 +123,16 @@ export default function RecordPage() {
   }, [form.buyAmount, form.sellShares, form.nav, form.feeRate, txType])
 
   const sellHint = useMemo(() => {
-    if (txType !== 'sell' || !form.fundCode) return null
-    const pos = positions.find((p) => p.fundCode === form.fundCode.trim() && !p.isCleared)
+    const code = form.fundCode || fundCodeRef.current?.value || ''
+    if (txType !== 'sell' || !code) return null
+    const pos = positions.find((p) => p.fundCode === code.trim() && !p.isCleared)
     return pos ? `可用份额：${shares(pos.totalShares)} 份` : '⚠ 无可用持仓'
-  }, [txType, form.fundCode, positions])
+  }, [txType, form.fundCode, form.fundName, positions])
 
   // ---- Save ----
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
-    const code = form.fundCode.trim(); const name = form.fundName.trim()
+    const code = (form.fundCode || fundCodeRef.current?.value || '').trim(); const name = form.fundName.trim()
     if (!code || !name) { showToast('请填写基金代码和名称', 'error'); return }
     const navRaw = form.nav ? parseFloat(form.nav) : undefined; const feeRate = parseFloat(form.feeRate) / 100 || 0
     const hasNav = navRaw != null && !isNaN(navRaw) && navRaw > 0
@@ -199,7 +201,7 @@ export default function RecordPage() {
       <form onSubmit={handleSave}>
         <TypeTabs active={txType} onChange={(t) => { setTxType(t); setEditId(null) }} />
         <div className="grid grid-cols-2 gap-3">
-          <div className="mb-3.5 min-w-0"><label className="block text-[13px] font-medium text-fg mb-1">基金代码</label><input className="w-full h-11 px-3 text-base font-mono border border-border rounded-sm outline-none focus:border-accent" value={form.fundCode} onInput={(e) => { const v = (e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6); setForm((f) => ({ ...f, fundCode: v })); if (v.length === 6) lookupFundCode(v) }} placeholder="输入6位代码" maxLength={6} required /></div>
+          <div className="mb-3.5 min-w-0"><label className="block text-[13px] font-medium text-fg mb-1">基金代码</label><input ref={fundCodeRef} className="w-full h-11 px-3 text-base font-mono border border-border rounded-sm outline-none focus:border-accent" defaultValue={form.fundCode} onInput={(e) => { const v = (e.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 6); (e.target as HTMLInputElement).value = v; if (v.length === 6) { setForm((f) => ({ ...f, fundCode: v })); lookupFundCode(v) } }} placeholder="输入6位代码" maxLength={6} required /></div>
           <div className="mb-3.5 min-w-0"><label className="block text-[13px] font-medium text-fg mb-1">基金名称</label><input className="w-full h-11 px-3 text-base border border-border rounded-sm outline-none focus:border-accent" value={form.fundName} onChange={(e) => setForm((f) => ({ ...f, fundName: e.target.value }))} placeholder={lookingUp ? '查询中…' : '自动联想'} readOnly={lookingUp} /></div>
         </div>
         {/* Date on its own row */}
