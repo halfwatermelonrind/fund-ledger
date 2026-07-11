@@ -87,7 +87,9 @@
       "Bash(cp -r dist /tmp/v2-filter)",
       "Bash(cp -r /tmp/v2-filter/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-r2fix)",
-      "Bash(cp -r /tmp/v2-r2fix/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-r2fix/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-counts)",
+      "Bash(cp -r /tmp/v2-counts/* docs/v2/)"
     ]
   }
 }

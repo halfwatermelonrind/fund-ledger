@@ -18,7 +18,7 @@ const TAG_CLS: Record<string, string> = {
 
 type SubTab = 'action' | 'watch'
 
-const ALL_RULES = ['全部', 'R1', 'R2', 'R3', 'R4', 'R5', 'R8']
+const ALL_RULES = ['全部', 'R5', 'R1', 'R4', 'R8', 'R2', 'R3']
 const SEEN_KEY = 'fund-ledger-signals-seen'
 
 function loadSeen(): Set<string> {
@@ -84,6 +84,15 @@ export default function SignalPage() {
   const actionSignals = useMemo(() => signals.filter((s) => s.type === 'action'), [signals])
   const watchSignals = useMemo(() => signals.filter((s) => s.type === 'watch'), [signals])
 
+  // Per-rule counts (across both tabs)
+  const ruleCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const s of signals) {
+      counts[s.rule] = (counts[s.rule] ?? 0) + 1
+    }
+    return counts
+  }, [signals])
+
   // Apply rule filter + sub tab
   const displayed = useMemo(() => {
     let list = subTab === 'action' ? actionSignals : watchSignals
@@ -122,15 +131,18 @@ export default function SignalPage() {
 
       {/* Rule filter */}
       <div className="flex gap-2 flex-wrap">
-        {ALL_RULES.map((r) => (
-          <button
-            key={r}
-            className={`px-3 py-1 min-h-8 text-[11px] font-medium border rounded-full transition-colors ${ruleFilter === r ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border hover:border-accent hover:text-accent'}`}
-            onClick={() => setRuleFilter(r)}
-          >
-            {r}
-          </button>
-        ))}
+        {ALL_RULES.map((r) => {
+          const count = r === '全部' ? signals.length : (ruleCounts[r] ?? 0)
+          return (
+            <button
+              key={r}
+              className={`px-3 py-1 min-h-8 text-[11px] font-medium border rounded-full transition-colors ${ruleFilter === r ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border hover:border-accent hover:text-accent'}`}
+              onClick={() => setRuleFilter(r)}
+            >
+              {r}{count > 0 && <span className="ml-1 opacity-70">({count})</span>}
+            </button>
+          )
+        })}
       </div>
 
       {displayed.length === 0 && (
