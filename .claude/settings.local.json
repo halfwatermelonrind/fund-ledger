@@ -91,7 +91,9 @@
       "Bash(cp -r dist /tmp/v2-counts)",
       "Bash(cp -r /tmp/v2-counts/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-scroll)",
-      "Bash(cp -r /tmp/v2-scroll/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-scroll/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-cross)",
+      "Bash(cp -r /tmp/v2-cross/* docs/v2/)"
     ]
   }
 }

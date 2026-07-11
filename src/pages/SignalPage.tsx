@@ -93,11 +93,10 @@ export default function SignalPage() {
     return counts
   }, [signals])
 
-  // Apply rule filter + sub tab
+  // Apply rule filter + sub tab (specific rule filter ignores subTab)
   const displayed = useMemo(() => {
-    let list = subTab === 'action' ? actionSignals : watchSignals
-    if (ruleFilter !== '全部') list = list.filter((s) => s.rule === ruleFilter)
-    return list
+    if (ruleFilter !== '全部') return signals.filter((s) => s.rule === ruleFilter)
+    return subTab === 'action' ? actionSignals : watchSignals
   }, [subTab, ruleFilter, actionSignals, watchSignals])
 
   function sigKey(s: Signal) { return `${s.rule}-${s.fundCode}` }
