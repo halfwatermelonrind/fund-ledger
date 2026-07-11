@@ -1,14 +1,16 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import type { Transaction, TransactionType } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { fetchLatestNav } from '../services/fundData'
 import { aggregatePositions } from '../utils/calculator'
+import { Download, Upload, Trash2, FolderOpen } from 'lucide-react'
 import { showToast } from '../components/Toast'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
 import TypeTabs from '../components/TypeTabs'
 import DataTable from '../components/DataTable'
 import ConfirmDialog from '../components/ConfirmDialog'
+import BatchImportModal from '../components/BatchImportModal'
 import { useIsPC } from '../hooks/useMediaQuery'
 import { money, shares, nav as fmtNav } from '../utils/format'
 import type { Column } from '../components/DataTable'
@@ -37,7 +39,30 @@ export default function RecordPage() {
   const updateTransaction = useFundStore((s) => s.updateTransaction)
   const deleteTransaction = useFundStore((s) => s.deleteTransaction)
   const batchFillNav = useFundStore((s) => s.batchFillNav)
+  const exportData = useFundStore((s) => s.exportData)
+  const importData = useFundStore((s) => s.importData)
+  const clearAllData = useFundStore((s) => s.clearAllData)
   const isPC = useIsPC()
+
+  // Import/export state + swipe
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const sheetRef = useRef<HTMLDivElement>(null)
+  const touchStartY = useRef(0)
+  const [clearOpen, setClearOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+
+  const handleExport = useCallback(() => {
+    const txs = useFundStore.getState().transactions
+    if (txs.length === 0) { showToast('暂无数据可导出', 'info'); return }
+    try { const json = exportData(); const blob = new Blob([json], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `fund-ledger-${new Date().toISOString().slice(0, 10)}.json`; a.click(); URL.revokeObjectURL(url); showToast('已导出', 'success') } catch { showToast('导出失败', 'error') }
+  }, [exportData])
+
+  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return
+    const reader = new FileReader(); reader.onload = () => { try { importData(reader.result as string); showToast('已导入', 'success') } catch (err) { showToast(err instanceof Error ? err.message : '导入失败', 'error') } }; reader.onerror = () => showToast('文件读取失败', 'error'); reader.readAsText(file); e.target.value = ''
+  }, [importData])
+
+  const handleClear = useCallback(() => { clearAllData(); setClearOpen(false); showToast('所有数据已清除', 'info') }, [clearAllData])
 
   // localStorage fallback
   const { transactions, navCache } = useMemo(() => {
@@ -211,10 +236,17 @@ export default function RecordPage() {
 
       {/* ---- Transaction List (right on PC, full on mobile) ---- */}
       <div className="bg-surface border border-border rounded-md p-4 pc:p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h2 className="text-base font-semibold tracking-wider text-fg">交易流水</h2>
-          {pendingCount > 0 && <Button variant="warn" size="sm" onClick={handleBatchBackfill}>一键回填 ({pendingCount})</Button>}
+        <div className="flex items-center justify-between mb-4 gap-1">
+          <h2 className="text-base font-semibold tracking-wider text-fg shrink-0">交易流水</h2>
+          <div className="flex items-center gap-0.5">
+            <button className="w-8 h-8 flex items-center justify-center rounded text-muted hover:text-accent hover:bg-accent-light transition-colors" title="批量导入已有持仓" onClick={() => setImportOpen(true)}><FolderOpen className="w-4 h-4" /></button>
+            <button className="w-8 h-8 flex items-center justify-center rounded text-muted hover:text-accent hover:bg-accent-light transition-colors" title="导出数据" onClick={handleExport}><Download className="w-4 h-4" /></button>
+            <button className="w-8 h-8 flex items-center justify-center rounded text-muted hover:text-accent hover:bg-accent-light transition-colors" title="导入数据" onClick={() => fileInputRef.current?.click()}><Upload className="w-4 h-4" /></button>
+            <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleImportFile} />
+            <button className="w-8 h-8 flex items-center justify-center rounded text-muted hover:text-gain hover:bg-gain-bg transition-colors" title="清除所有数据" onClick={() => setClearOpen(true)}><Trash2 className="w-4 h-4" /></button>
+          </div>
         </div>
+        {pendingCount > 0 && <div className="mb-3"><Button variant="warn" size="sm" onClick={handleBatchBackfill}>一键回填 ({pendingCount})</Button></div>}
         <div className="flex gap-2 flex-wrap mb-3">
           {filterPills.map((p) => <button key={p.key} className={`px-3 py-1.5 min-h-10 text-xs font-medium border rounded-full transition-colors ${filter === p.key ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border hover:border-accent hover:text-accent'}`} onClick={() => setFilter(p.key)}>{p.label}</button>)}
         </div>
@@ -259,10 +291,16 @@ export default function RecordPage() {
       {/* ---- Mobile FAB ---- */}
       {!isPC && <button className="fixed bottom-20 right-4 w-[52px] h-[52px] bg-accent text-white border-0 rounded-full text-[26px] flex items-center justify-center cursor-pointer shadow-[0_4px_16px_rgba(30,58,138,.35)] z-[90] active:scale-95" onClick={() => openSheet()} aria-label="录入交易">+</button>}
 
-      {/* ---- Mobile Bottom Sheet Entry ---- */}
+      {/* ---- Mobile Bottom Sheet Entry (swipe to dismiss) ---- */}
       {!isPC && sheetOpen && (
         <div className="fixed inset-0 bg-black/40 z-[1500] flex items-end" onClick={(e) => { if (e.target === e.currentTarget) { setSheetOpen(false); resetForm() } }}>
-          <div className="bg-surface rounded-t-xl w-full max-h-[88vh] overflow-y-auto p-5 pb-[calc(20px+env(safe-area-inset-bottom,0))]">
+          <div ref={sheetRef} className="bg-surface rounded-t-xl w-full max-h-[88vh] overflow-y-auto p-5 pb-[calc(20px+env(safe-area-inset-bottom,0))]"
+            onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY }}
+            onTouchMove={(e) => {
+              const dy = e.touches[0].clientY - touchStartY.current
+              if (dy > 80) { setSheetOpen(false); resetForm() }
+            }}
+          >
             <div className="w-9 h-1 bg-border rounded-sm mx-auto mb-4" />
             <h3 className="text-[17px] font-semibold mb-4 text-center">{editId ? '编辑交易' : '录入交易'}{form.fundCode && <span className="text-sm font-normal text-muted ml-2">· {form.fundCode}</span>}</h3>
             <EntryForm />
@@ -272,6 +310,13 @@ export default function RecordPage() {
 
       {/* Modals */}
       <ConfirmDialog open={deleteId !== null} title="确认删除" message="确定要删除这条交易记录吗？" onConfirm={() => { if (deleteId) { deleteTransaction(deleteId); showToast('已删除', 'info') } setDeleteId(null) }} onCancel={() => setDeleteId(null)} />
+      <ConfirmDialog open={clearOpen} title="清除所有数据" message="确定要删除所有本地交易记录和缓存数据吗？此操作不可撤销。建议先导出备份。" confirmLabel="确认清除" onConfirm={handleClear} onCancel={() => setClearOpen(false)} />
+      {importOpen && (
+        <div className="fixed inset-0 bg-black/40 z-[1500] flex items-center justify-center" onClick={(e) => { if (e.target === e.currentTarget) setImportOpen(false) }}>
+          {/* BatchImportModal reused inline */}
+          <BatchImportModal open={importOpen} onClose={() => setImportOpen(false)} />
+        </div>
+      )}
       {backfillId && (
         <div className="fixed inset-0 bg-black/40 z-[1500] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setBackfillId(null) }}>
           <div className="bg-surface rounded-lg p-6 max-w-[400px] w-full shadow-[0_20px_60px_rgba(0,0,0,0.2)]"><h3 className="text-base font-semibold mb-3">手动回填净值</h3><div className="text-sm text-muted mb-4">基金：{transactions.find((t) => t.id === backfillId)?.fundName ?? '—'}<br/>日期：{transactions.find((t) => t.id === backfillId)?.tradeDate ?? '—'}</div><label className="block text-[13px] font-medium text-fg mb-1">单位净值</label><input className="w-full h-10 px-3 text-sm font-mono border border-accent rounded-sm outline-none" type="number" step="0.0001" min="0" value={backfillNav} onChange={(e) => setBackfillNav(e.target.value)} placeholder="输入净值" autoFocus /><div className="flex gap-2 justify-end mt-5"><Button variant="secondary" size="sm" onClick={() => setBackfillId(null)}>取消</Button><Button size="sm" onClick={confirmBackfill}>确认回填</Button></div></div>
