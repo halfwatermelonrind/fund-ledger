@@ -111,7 +111,9 @@
       "Bash(cp -r dist /tmp/v2-ctrl)",
       "Bash(cp -r /tmp/v2-ctrl/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-uctrl)",
-      "Bash(cp -r /tmp/v2-uctrl/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-uctrl/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-sheet)",
+      "Bash(cp -r /tmp/v2-sheet/* docs/v2/)"
     ]
   }
 }
