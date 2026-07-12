@@ -16,8 +16,6 @@ const TAG_CLS: Record<string, string> = {
   watch: 'bg-warn text-white',
 }
 
-type SubTab = 'action' | 'watch'
-
 const ALL_RULES = ['全部', 'R5', 'R1', 'R4', 'R8', 'R2', 'R3']
 const SEEN_KEY = 'fund-ledger-signals-seen'
 
@@ -38,10 +36,10 @@ export default function SignalPage() {
   const refreshLatestNav = useFundStore((s) => s.refreshLatestNav)
   const isPC = useIsPC()
 
-  const [subTab, setSubTab] = useState<SubTab>('action')
   const [ruleFilter, setRuleFilter] = useState('全部')
   const [expandedSig, setExpandedSig] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showRules, setShowRules] = useState(false)
 
   const { transactions, navCache } = useMemo(() => {
     let t = storeTransactions; let c = storeNavCache
@@ -81,10 +79,7 @@ export default function SignalPage() {
     return news
   }, [signals])
 
-  const actionSignals = useMemo(() => signals.filter((s) => s.type === 'action'), [signals])
-  const watchSignals = useMemo(() => signals.filter((s) => s.type === 'watch'), [signals])
-
-  // Per-rule counts (across both tabs)
+  // Per-rule counts
   const ruleCounts = useMemo(() => {
     const counts: Record<string, number> = {}
     for (const s of signals) {
@@ -93,11 +88,11 @@ export default function SignalPage() {
     return counts
   }, [signals])
 
-  // Apply rule filter + sub tab (specific rule filter ignores subTab)
+  // Apply rule filter
   const displayed = useMemo(() => {
     if (ruleFilter !== '全部') return signals.filter((s) => s.rule === ruleFilter)
-    return subTab === 'action' ? actionSignals : watchSignals
-  }, [subTab, ruleFilter, actionSignals, watchSignals])
+    return signals
+  }, [ruleFilter, signals])
 
   function sigKey(s: Signal) { return `${s.rule}-${s.fundCode}` }
 
@@ -107,25 +102,12 @@ export default function SignalPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h2 className="text-base font-semibold tracking-wider text-fg">交易信号</h2>
-        {refreshing && <span className="text-[11px] text-muted animate-pulse">刷新中…</span>}
-      </div>
-
-      {/* Sub tabs */}
-      <div className="flex gap-2">
-        <button
-          className={`px-4 py-1.5 min-h-10 text-xs font-medium border rounded-full transition-colors ${subTab === 'action' ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border'}`}
-          onClick={() => setSubTab('action')}
-        >
-          ⚡ 操作信号（{actionSignals.length}）
-        </button>
-        <button
-          className={`px-4 py-1.5 min-h-10 text-xs font-medium border rounded-full transition-colors ${subTab === 'watch' ? 'bg-accent text-white border-accent' : 'bg-surface text-muted border-border'}`}
-          onClick={() => setSubTab('watch')}
-        >
-          👁 观察提醒（{watchSignals.length}）
-        </button>
+        <div className="flex items-center gap-2">
+          {refreshing && <span className="text-[11px] text-muted animate-pulse">刷新中…</span>}
+          <button className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:text-accent hover:bg-accent-light transition-colors text-sm font-bold" onClick={() => setShowRules(true)} title="规则说明">i</button>
+        </div>
       </div>
 
       {/* Rule filter — horizontally scrollable on mobile */}
@@ -148,7 +130,7 @@ export default function SignalPage() {
 
       {displayed.length === 0 && (
         <div className="text-center py-16 text-muted">
-          {ruleFilter !== '全部' ? `暂无 ${ruleFilter} 信号` : subTab === 'action' ? '暂无操作信号 🎉' : '暂无观察提醒'}
+          {ruleFilter !== '全部' ? `暂无 ${ruleFilter} 信号` : '暂无信号 🎉'}
         </div>
       )}
 
@@ -221,6 +203,23 @@ export default function SignalPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Rules explanation modal */}
+      {showRules && (
+        <div className="fixed inset-0 bg-black/40 z-[1500] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setShowRules(false) }}>
+          <div className="bg-surface rounded-lg p-6 max-w-[440px] w-full max-h-[80vh] overflow-y-auto shadow-[0_20px_60px_rgba(0,0,0,0.2)]">
+            <div className="flex items-center justify-between mb-4"><h3 className="text-base font-semibold">规则说明</h3><button className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:bg-bg transition-colors text-lg leading-none" onClick={() => setShowRules(false)}>×</button></div>
+            <div className="space-y-4 text-sm leading-relaxed">
+              <div><span className="font-semibold text-gain">R5 分步清仓线</span>（最高优先级）<br/>收益率跌破 -10% 减仓 50%，跌破 -15% 再减半（剩 25%），跌破 -20% 清仓。V 型反转仍有仓位参与。</div>
+              <div><span className="font-semibold text-loss">R1 动态缓冲防线</span>（高优先级）<br/>收益率跌破 -3% 且建仓满 20 天后触发减仓 30%。仅对正常建仓基金生效，纯初始化导入的不适用。</div>
+              <div><span className="font-semibold text-loss">R4 利润保护线</span>（高优先级）<br/>历史最高收益率曾超 10%，当前回撤过半时减仓 30%。让到手的钱不飞走。</div>
+              <div><span className="font-semibold text-loss">R8 时间止损</span>（高优先级）<br/>持仓超 6 个月且收益仍 &lt; -3%：减仓 50%。超 12 个月：清仓。防止资金长期被套。</div>
+              <div><span className="font-semibold text-accent">R2 单笔 5% 止损</span>（中优先级）<br/>最近一笔真实买入（不含初始化）跌幅 ≥ 5% 时，卖出该笔加仓。</div>
+              <div><span className="font-semibold text-accent">R3 浮盈加仓控制</span>（中优先级）<br/>当前盈利且利润垫薄（R_max &lt; 15%）时可小额加仓 ≤ 10%。利润垫厚时禁止追高。</div>
+            </div>
+          </div>
         </div>
       )}
     </div>

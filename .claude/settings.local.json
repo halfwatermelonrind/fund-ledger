@@ -113,7 +113,15 @@
       "Bash(cp -r dist /tmp/v2-uctrl)",
       "Bash(cp -r /tmp/v2-uctrl/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-sheet)",
-      "Bash(cp -r /tmp/v2-sheet/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-sheet/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-rules)",
+      "Bash(cp -r /tmp/v2-rules/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-rules2)",
+      "Bash(cp -r /tmp/v2-rules2/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-rules3)",
+      "Bash(cp -r /tmp/v2-rules3/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-rules4)",
+      "Bash(cp -r /tmp/v2-rules4/* docs/v2/)"
     ]
   }
 }

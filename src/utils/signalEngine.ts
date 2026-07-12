@@ -200,9 +200,12 @@ export function computeSignals(
 
     if (r5Triggered) continue // R5 tier 3: skip other rules
 
-    // ---- R1: 动态缓冲防线 ----
-    const r1Result = evaluateR1(pos, rate, buildDays)
-    if (r1Result) signals.push(r1Result)
+    // ---- R1: 动态缓冲防线 (skip init-only funds) ----
+    const hasRealBuy = transactions.some((t) => t.fundCode === pos.fundCode && (t.type === 'buy' || t.type === 'dividend_reinvest') && t.navSource !== 'init')
+    if (hasRealBuy) {
+      const r1Result = evaluateR1(pos, rate, buildDays)
+      if (r1Result) signals.push(r1Result)
+    }
 
     // ---- R4: 利润保护线 ----
     const r4Result = evaluateR4(pos, rate, rMax)
