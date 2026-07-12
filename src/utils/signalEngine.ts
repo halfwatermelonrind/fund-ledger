@@ -42,7 +42,7 @@ export interface Signal {
 // ============================================================
 
 const R1_THRESHOLD = -3       // unified -3% threshold
-const R1_BUFFER_DAYS = 20     // 20 trading day buffer
+const R1_BUFFER_DAYS = 7      // 7-day buffer
 const R5_TIER1 = -10
 const R5_TIER2 = -15
 const R5_TIER3 = -20

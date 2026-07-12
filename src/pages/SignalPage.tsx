@@ -213,7 +213,7 @@ export default function SignalPage() {
             <div className="flex items-center justify-between mb-4"><h3 className="text-base font-semibold">规则说明</h3><button className="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:bg-bg transition-colors text-lg leading-none" onClick={() => setShowRules(false)}>×</button></div>
             <div className="space-y-4 text-sm leading-relaxed">
               <div><span className="font-semibold text-gain">R5 分步清仓线</span>（最高优先级）<br/>收益率跌破 -10% 减仓 50%，跌破 -15% 再减半（剩 25%），跌破 -20% 清仓。V 型反转仍有仓位参与。</div>
-              <div><span className="font-semibold text-loss">R1 动态缓冲防线</span>（高优先级）<br/>收益率跌破 -3% 且建仓满 20 天后触发减仓 30%。仅对正常建仓基金生效，纯初始化导入的不适用。</div>
+              <div><span className="font-semibold text-loss">R1 动态缓冲防线</span>（高优先级）<br/>收益率跌破 -3% 且建仓满 7 天后触发减仓 30%。仅对首笔为正常买入的基金生效。</div>
               <div><span className="font-semibold text-loss">R4 利润保护线</span>（高优先级）<br/>历史最高收益率曾超 10%，当前回撤过半时减仓 30%。让到手的钱不飞走。</div>
               <div><span className="font-semibold text-loss">R8 时间止损</span>（高优先级）<br/>持仓超 6 个月且收益仍 &lt; -3%：减仓 50%。超 12 个月：清仓。防止资金长期被套。</div>
               <div><span className="font-semibold text-accent">R2 单笔 5% 止损</span>（中优先级）<br/>最近一笔真实买入（不含初始化）跌幅 ≥ 5% 时，卖出该笔加仓。</div>
