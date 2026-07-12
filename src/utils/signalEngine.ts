@@ -203,7 +203,8 @@ export function computeSignals(
     // ---- R1: 动态缓冲防线 (skip init-only funds) ----
     const hasRealBuy = transactions.some((t) => t.fundCode === pos.fundCode && (t.type === 'buy' || t.type === 'dividend_reinvest') && t.navSource !== 'init')
     if (hasRealBuy) {
-      const r1Result = evaluateR1(pos, rate, buildDays)
+      const buildDate = getBuildDate(transactions, pos.fundCode)
+      const r1Result = evaluateR1(pos, rate, buildDays, buildDate ? buildDate.toISOString().slice(0, 10) : '未知')
       if (r1Result) signals.push(r1Result)
     }
 
@@ -252,7 +253,7 @@ function evaluateR5(pos: Position, rate: number): Signal | null {
   }
 }
 
-function evaluateR1(pos: Position, rate: number, buildDays: number): Signal | null {
+function evaluateR1(pos: Position, rate: number, buildDays: number, buildDate: string): Signal | null {
   const inBuffer = buildDays < R1_BUFFER_DAYS
   const triggered = rate < R1_THRESHOLD && rate >= R5_TIER1 // below -3% but above R5
 
@@ -266,6 +267,7 @@ function evaluateR1(pos: Position, rate: number, buildDays: number): Signal | nu
       detail: [
         { label: '规则', value: `收益率 < ${R1_THRESHOLD}% → 减仓 30%` },
         { label: '当前收益率', value: pnlText(rate), cls: pnlCls(rate) },
+        { label: '建仓日期', value: buildDate },
         { label: '建仓天数', value: `${buildDays} 天（已过 ${R1_BUFFER_DAYS} 天缓冲期）` },
         { label: '建议操作', value: '减仓 30%' },
         { label: '风险', value: '若不执行，继续下跌到 -10% 将触发 R5' },
@@ -281,6 +283,7 @@ function evaluateR1(pos: Position, rate: number, buildDays: number): Signal | nu
       detail: [
         { label: '规则', value: `建仓 ${R1_BUFFER_DAYS} 天内不触发 R1` },
         { label: '当前收益率', value: pnlText(rate), cls: pnlCls(rate) },
+        { label: '建仓日期', value: buildDate },
         { label: '建仓天数', value: `${buildDays} 天` },
         { label: '建议', value: '继续观察，暂不操作' },
       ],

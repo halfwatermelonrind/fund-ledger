@@ -121,7 +121,9 @@
       "Bash(cp -r dist /tmp/v2-rules3)",
       "Bash(cp -r /tmp/v2-rules3/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-rules4)",
-      "Bash(cp -r /tmp/v2-rules4/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-rules4/* docs/v2/)",
+      "Bash(cp -r dist /tmp/v2-r1date)",
+      "Bash(cp -r /tmp/v2-r1date/* docs/v2/)"
     ]
   }
 }
