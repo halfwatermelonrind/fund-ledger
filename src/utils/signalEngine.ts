@@ -200,9 +200,12 @@ export function computeSignals(
 
     if (r5Triggered) continue // R5 tier 3: skip other rules
 
-    // ---- R1: 动态缓冲防线 (skip init-only funds) ----
-    const hasRealBuy = transactions.some((t) => t.fundCode === pos.fundCode && (t.type === 'buy' || t.type === 'dividend_reinvest') && t.navSource !== 'init')
-    if (hasRealBuy) {
+    // ---- R1: 动态缓冲防线 (only if FIRST transaction is a real buy, not init) ----
+    const firstTx = transactions
+      .filter((t) => t.fundCode === pos.fundCode)
+      .sort((a, b) => a.tradeDate.localeCompare(b.tradeDate))[0]
+    const startsWithRealBuy = firstTx && (firstTx.type === 'buy' || firstTx.type === 'dividend_reinvest') && firstTx.navSource !== 'init'
+    if (startsWithRealBuy) {
       const buildDate = getBuildDate(transactions, pos.fundCode)
       const r1Result = evaluateR1(pos, rate, buildDays, buildDate ? buildDate.toISOString().slice(0, 10) : '未知')
       if (r1Result) signals.push(r1Result)
