@@ -3,8 +3,11 @@
  *  fundData.ts — 基金数据源封装
  *
  *  数据来源：
- *    天天基金 fundgz.1234567.com.cn  → JSONP（最新净值 + 实时估值）
+ *    东方财富 api.fund.eastmoney.com  → JSONP（全量基金估值缓存，含实时估算）
  *    东方财富 fund.eastmoney.com       → Script 注入（历史净值 / 基金列表）
+ *
+ *  基金估值 GetFundGZList 全量一次加载（~23000 只，~13 MB），
+ *  后续查询直接从内存缓存返回。
  *
  *  所有请求 10 秒超时，失败抛出可读错误。
  *  浏览器环境使用动态 <script> 标签（无跨域限制）。
@@ -32,8 +35,8 @@ const DEFAULT_TIMEOUT = 10_000
 /**
  * JSONP — 动态插入 <script>，等待全局回调被调用。
  *
- * 天天基金 API 固定回调名为 `jsonpgz`，因此并发调用必须串行化。
- * 使用一个简单的串行队列保证同一时刻只有一个 JSONP 请求进行中。
+ * 与旧天天基金接口不同，新 API 支持自定义回调名（callback 参数），
+ * 因此无需串行化，直接并发即可。
  */
 function jsonp<T>(url: string, callbackName: string, timeout = DEFAULT_TIMEOUT): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -110,121 +113,181 @@ function injectScript(url: string, timeout = DEFAULT_TIMEOUT): Promise<void> {
 }
 
 // ============================================================
-// JSONP 串行化（天天基金 jsonpgz 回调是全局单例）
+// 全量基金估值缓存（东方财富 FundGuZhi API）
+//
+// GET https://api.fund.eastmoney.com/FundGuZhi/GetFundGZList
+//   ?type=1&sort=3&orderType=desc&canbuy=0
+//   &pageIndex=1&pageSize=23672
+//   &callback=__fundgz_cache
+//
+// 全量 ~23000 只基金，约 13 MB，JSONP 单次加载后内存缓存。
+// 后续 fetchLatestNav 直接查缓存，毫秒级返回。
 // ============================================================
 
-let jsonpgzQueue: Promise<void> = Promise.resolve()
+interface GZFundItem {
+  bzdm: string      // 基金代码
+  jjjc: string      // 基金简称
+  gsz?: string      // 实时估算净值
+  gszzl?: string    // 估算增长率 %
+  dwjz: string      // 确认单位净值
+  jzzzl?: string    // 确认净值增长率 %
+  gzrq: string      // 估值日期 YYYY-MM-DD
+  gxrq: string      // 更新日期 YYYY-MM-DD
+  sgzt?: string     // 申购状态
+  shzt?: string     // 赎回状态
+}
 
-function serialJsonp<T>(url: string, timeout = DEFAULT_TIMEOUT): Promise<T> {
-  const task = jsonpgzQueue.then(() => jsonp<T>(url, 'jsonpgz', timeout))
-  // Swallow errors so the queue continues
-  jsonpgzQueue = task.then(() => {}).catch(() => {})
-  return task
+interface GZListResponse {
+  Data: {
+    list: GZFundItem[]
+    gzrq: string
+    gxrq: string
+  }
+  ErrCode: number
+  TotalCount: number
+}
+
+interface FundGZEntry {
+  name: string
+  nav: number          // dwjz
+  date: string         // gzrq
+  estimate?: number    // gsz
+  change?: number      // gszzl
+  navChange?: number   // jzzzl
+  time: string         // gxrq
+}
+
+let fundGZCache: Map<string, FundGZEntry> | null = null
+let fundGZLoading: Promise<void> | null = null
+
+const FUNDGZ_CALLBACK = '__fundgz_cache_cb'
+const FUNDGZ_PAGE_SIZE = 23672  // 全量一次拉取
+
+async function loadFundGZCache(): Promise<void> {
+  if (fundGZCache) return
+  if (fundGZLoading) return fundGZLoading
+
+  fundGZLoading = (async () => {
+    if (!isBrowser) {
+      fundGZCache = buildMockCache()
+      return
+    }
+
+    const url = [
+      'https://api.fund.eastmoney.com/FundGuZhi/GetFundGZList',
+      '?type=1&sort=3&orderType=desc&canbuy=0',
+      `&pageIndex=1&pageSize=${FUNDGZ_PAGE_SIZE}`,
+      `&callback=${FUNDGZ_CALLBACK}`,
+      `&_=${Date.now()}`,
+    ].join('')
+
+    console.log('[fundData] loading full FundGuZhi cache (~13 MB)...')
+    const t0 = Date.now()
+
+    try {
+      const raw = await jsonp<GZListResponse>(url, FUNDGZ_CALLBACK, 30_000) // 大文件给 30s
+
+      if (raw.ErrCode !== 0 || !raw.Data?.list) {
+        throw new Error(`FundGuZhi API ErrCode=${raw.ErrCode}`)
+      }
+
+      const cache = new Map<string, FundGZEntry>()
+      for (const item of raw.Data.list) {
+        if (!item.bzdm || !item.jjjc) continue
+
+        cache.set(item.bzdm, {
+          name: item.jjjc,
+          nav: parseFloat(item.dwjz) || 0,
+          date: item.gzrq || '',
+          estimate: item.gsz != null && item.gsz !== '' ? parseFloat(item.gsz) : undefined,
+          change: item.gszzl != null && item.gszzl !== '' ? parseFloat(item.gszzl) : undefined,
+          navChange: item.jzzzl != null && item.jzzzl !== '' ? parseFloat(item.jzzzl) : undefined,
+          time: item.gxrq || '',
+        })
+      }
+
+      fundGZCache = cache
+      const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
+      console.log(`[fundData] FundGuZhi cache ready: ${cache.size} funds in ${elapsed}s`)
+    } catch (err) {
+      fundGZLoading = null // 允许重试
+      const msg = err instanceof Error ? err.message : '未知错误'
+      throw new Error(`加载基金估值数据失败：${msg}`)
+    }
+  })()
+
+  return fundGZLoading
 }
 
 // ============================================================
 // fetchLatestNav
 //
-// GET https://fundgz.1234567.com.cn/js/{code}.js?rt={ts}
-// 响应：jsonpgz({ fundcode, name, jzrq, dwjz, gsz, gszzl, gztime })
+// 优先从 FundGuZhi 全量缓存查找（含实时估值）。
+// 缓存未命中时降级到东方财富 pingzhongdata。
 // ============================================================
-
-interface JsonpgzResponse {
-  fundcode: string
-  name: string
-  jzrq: string    // 净值日期 YYYY-MM-DD
-  dwjz: string    // 单位净值
-  gsz?: string    // 实时估算净值（QDII/货币基金可能缺失）
-  gszzl?: string  // 估算涨跌幅 %
-  gztime?: string // 估值时间 YYYY-MM-DD HH:mm
-}
 
 export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   if (!isBrowser) {
     return mockLatestNav(fundCode)
   }
 
-  let name = ''
-  let nav = 0
-  let date = ''
-  let estimate: number | undefined
-  let change: number | undefined
-  let navChange: number | undefined
-  let time: string | undefined
-
-  // ---- Step 1: 天天基金 JSONP (fast, includes real-time estimate) ----
-  let jsonpOk = false
+  // ---- Step 1: 尝试从 FundGuZhi 缓存获取 ----
   try {
-    const url = `https://fundgz.1234567.com.cn/js/${fundCode}.js?rt=${Date.now()}`
-    const raw = await serialJsonp<JsonpgzResponse>(url)
+    await loadFundGZCache()
+    const entry = fundGZCache?.get(fundCode)
 
-    if (!raw.name || raw.name === '') {
-      throw new Error('天天基金返回空名称')
-    }
-
-    name = raw.name
-    nav = parseFloat(raw.dwjz)
-    date = raw.jzrq
-    estimate = raw.gsz != null && raw.gsz !== '' ? parseFloat(raw.gsz) : undefined
-    change = raw.gszzl != null && raw.gszzl !== '' ? parseFloat(raw.gszzl) : undefined
-    time = raw.gztime || undefined
-    jsonpOk = true
-  } catch (_jsonpErr) {
-    // Will try Eastmoney fallback below
-  }
-
-  // ---- Step 2: 东方财富补充 / 降级 ----
-  // For QDII/HK funds, the JSONP NAV date may be 1-2 days behind.
-  // Eastmoney pingzhongdata often has a more recent confirmed NAV.
-  const today = new Date().toISOString().slice(0, 10)
-  const isStale = !jsonpOk || (date && date < today)
-
-  if (isStale) {
-    if (!jsonpOk) {
-      console.log(`[fundData] JSONP failed for ${fundCode}, trying Eastmoney fallback...`)
-    } else {
-      console.log(`[fundData] NAV date ${date} is stale, supplementing from Eastmoney...`)
-    }
-    try {
-      const url = `https://fund.eastmoney.com/pingzhongdata/${fundCode}.js?v=${Date.now()}`
-      await injectScript(url)
-
-      const eastName = (window as any).fS_name as string | undefined
-      const trend = (window as any).Data_netWorthTrend as NetWorthPoint[] | undefined
-
-      if (eastName && trend && trend.length > 0) {
-        if (!jsonpOk) name = eastName
-
-        const latest = trend[trend.length - 1]
-        const d = new Date(latest.x + 8 * 60 * 60 * 1000)
-        const eastDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
-
-        if (!jsonpOk || eastDate > date) {
-          nav = latest.y
-          date = eastDate
-        }
-
-        // Compute confirmed NAV day-over-day change from last 2 entries
-        if (trend.length >= 2) {
-          const prev = trend[trend.length - 2]
-          if (prev.y > 0) {
-            navChange = Math.round((latest.y - prev.y) / prev.y * 10000) / 100
-          }
-        }
-      }
-    } catch (_eastErr) {
-      // If JSONP succeeded, Eastmoney supplement failure is non-fatal
-      if (!jsonpOk) {
-        throw new Error('天天基金和东方财富均不可用')
+    if (entry && entry.name) {
+      return {
+        name: entry.name,
+        nav: entry.nav,
+        date: entry.date,
+        estimate: entry.estimate,
+        change: entry.change,
+        navChange: entry.navChange,
+        time: entry.time,
       }
     }
+
+    console.log(`[fundData] ${fundCode} not in FundGuZhi cache, trying pingzhongdata...`)
+  } catch (_cacheErr) {
+    console.warn(`[fundData] FundGuZhi cache unavailable, falling back to pingzhongdata`)
   }
 
-  if (!jsonpOk && !name) {
-    throw new Error(`无法获取基金 ${fundCode} 的数据`)
-  }
+  // ---- Step 2: 降级到 pingzhongdata（无实时估值）----
+  try {
+    const url = `https://fund.eastmoney.com/pingzhongdata/${fundCode}.js?v=${Date.now()}`
+    await injectScript(url)
 
-  return { name, nav, date, estimate, change, navChange, time }
+    const eastName = (window as any).fS_name as string | undefined
+    const trend = (window as any).Data_netWorthTrend as NetWorthPoint[] | undefined
+
+    if (!eastName || !trend || trend.length === 0) {
+      throw new Error('pingzhongdata 无数据')
+    }
+
+    const latest = trend[trend.length - 1]
+    const d = new Date(latest.x + 8 * 60 * 60 * 1000)
+    const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+
+    let navChange: number | undefined
+    if (trend.length >= 2) {
+      const prev = trend[trend.length - 2]
+      if (prev.y > 0) {
+        navChange = Math.round((latest.y - prev.y) / prev.y * 10000) / 100
+      }
+    }
+
+    return {
+      name: eastName,
+      nav: latest.y,
+      date,
+      navChange,
+      // 无实时估值
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '未知错误'
+    throw new Error(`无法获取基金 ${fundCode} 的数据：${msg}`)
+  }
 }
 
 // ============================================================
@@ -393,9 +456,37 @@ const MOCK_HISTORY: Record<string, HistoryNavPoint[]> = {
   ],
 }
 
+function buildMockCache(): Map<string, FundGZEntry> {
+  const cache = new Map<string, FundGZEntry>()
+  for (const [code, data] of Object.entries(MOCK_NAV)) {
+    cache.set(code, {
+      name: data.name,
+      nav: data.nav,
+      date: data.date,
+      estimate: data.estimate,
+      change: data.change,
+      navChange: data.navChange,
+      time: data.time || data.date,
+    })
+  }
+  return cache
+}
+
 async function mockLatestNav(fundCode: string): Promise<FundNavData> {
-  const data = MOCK_NAV[fundCode]
-  if (data) return { ...data }
+  // 优先从 mock 缓存查
+  if (!fundGZCache) fundGZCache = buildMockCache()
+  const entry = fundGZCache.get(fundCode)
+  if (entry) {
+    return {
+      name: entry.name,
+      nav: entry.nav,
+      date: entry.date,
+      estimate: entry.estimate,
+      change: entry.change,
+      navChange: entry.navChange,
+      time: entry.time,
+    }
+  }
   throw new Error(`无法获取基金 ${fundCode} 的净值数据（mock）`)
 }
 

@@ -127,7 +127,19 @@
       "Bash(cp -r dist /tmp/v2-r1fix)",
       "Bash(cp -r /tmp/v2-r1fix/* docs/v2/)",
       "Bash(cp -r dist /tmp/v2-r1-7d)",
-      "Bash(cp -r /tmp/v2-r1-7d/* docs/v2/)"
+      "Bash(cp -r /tmp/v2-r1-7d/* docs/v2/)",
+      "Bash(curl -s --max-time 10 \"https://fundgz.1234567.com.cn/js/005827.js?rt=$\\(date +%s\\)\")",
+      "Bash(curl -s --max-time 10 \"https://fund.eastmoney.com/pingzhongdata/005827.js?v=$\\(date +%s\\)\")",
+      "Bash(curl -s --max-time 15 -o /dev/null -w \"HTTP %{http_code}, Size: %{size_download} bytes, Time: %{time_total}s\" \"https://fund.eastmoney.com/js/fundcode_search.js?v=$\\(date +%s\\)\")",
+      "Bash(curl *)",
+      "Bash(iconv -f gb2312 -t utf-8)",
+      "WebFetch(domain:github.com)",
+      "WebSearch",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python3 -m json.tool)",
+      "WebFetch(domain:pypi.org)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Total:', d.get\\('TotalCount'\\)\\); print\\('Returned:', len\\(d.get\\('Data',{}\\).get\\('list',[]\\)\\)\\)\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/tmp/fundgz_https.json'\\)\\); print\\(f'Total: {d[\\\\\"TotalCount\\\\\"]}, list len: {len\\(d[\\\\\"Data\\\\\"][\\\\\"list\\\\\"]\\)}'\\)\")"
     ]
   }
 }

@@ -63,15 +63,15 @@ export interface Position {
   isCleared: boolean
 }
 
-/** Fund NAV + estimate response from JSONP */
+/** Fund NAV + estimate response */
 export interface FundNavData {
   name: string
-  nav: number // dwjz
-  date: string // jzrq
-  estimate?: number // gsz
-  change?: number // gszzl (预估涨跌幅)
-  navChange?: number // 确认净值涨跌幅 (dwjz day-over-day)
-  time?: string // gztime
+  nav: number          // dwjz — 确认单位净值
+  date: string         // gzrq — 估值日期 YYYY-MM-DD
+  estimate?: number    // gsz — 实时估算净值
+  change?: number      // gszzl — 估算涨跌幅 %
+  navChange?: number   // jzzzl — 确认净值涨跌幅 %
+  time?: string        // gxrq / gztime — 更新时间
 }
 
 /** Historical NAV point */
