@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import type { Transaction, Position } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { aggregatePositions } from '../utils/calculator'
+import { isTradingHours } from '../services/fundData'
 import Button from '../components/Button'
 import RefreshButton from '../components/RefreshButton'
 import DataTable from '../components/DataTable'
@@ -107,7 +108,8 @@ export default function DetailsPage() {
   const [sortDir, setSortDir] = useState<1 | -1>(-1)
   const [updateTime, setUpdateTime] = useState('')
   const [calculatorPos, setCalculatorPos] = useState<Position | null>(null)
-  const [expandedCode, setExpandedCode] = useState<string | null>(null)
+  const [expandedDetail, setExpandedDetail] = useState<string | null>(null)
+  const [expandedPnl, setExpandedPnl] = useState<string | null>(null)
   const [clearedOpen, setClearedOpen] = useState(false)
 
   // Auto-refresh valuations on mount
@@ -184,9 +186,11 @@ export default function DetailsPage() {
         <div className="flex flex-col gap-3">
           {sortedActive.length === 0 && <div className="text-center py-10 text-muted"><p>暂无持仓数据</p></div>}
           {sortedActive.map((p) => {
-            const expanded = expandedCode === p.fundCode
+            const detailOpen = expandedDetail === p.fundCode
+            const pnlOpen = expandedPnl === p.fundCode
+            const hasTxPnl = txs.some((t: Transaction) => t.fundCode === p.fundCode && (t.type === 'buy' || t.type === 'sell') && t.nav != null && t.nav > 0)
             return (
-              <div key={p.fundCode} className="bg-surface border border-border rounded-md overflow-hidden" onClick={() => setExpandedCode(expanded ? null : p.fundCode)}>
+              <div key={p.fundCode} className="bg-surface border border-border rounded-md overflow-hidden">
                 <div className="p-3.5 flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="text-[15px] font-semibold leading-snug">{p.fundName}</div>
@@ -207,7 +211,19 @@ export default function DetailsPage() {
                     <div className="text-[10px] text-muted">市值</div>
                   </div>
                 </div>
-                {expanded && (
+                {/* Expand buttons */}
+                <div className="flex items-center gap-3 mt-1.5 justify-end px-0">
+                  <button className="inline-flex items-center gap-0.5 text-[11px] font-medium text-muted bg-transparent border-0 cursor-pointer hover:text-accent transition-colors" onClick={(e) => { e.stopPropagation(); setExpandedDetail(detailOpen ? null : p.fundCode) }}>
+                    <span className={`text-[8px] transition-transform ${detailOpen ? 'rotate-90' : ''}`}>▸</span> 持仓详情
+                  </button>
+                  {hasTxPnl && (
+                    <button className="inline-flex items-center gap-0.5 text-[11px] font-medium text-muted bg-transparent border-0 cursor-pointer hover:text-accent transition-colors" onClick={(e) => { e.stopPropagation(); setExpandedPnl(pnlOpen ? null : p.fundCode) }}>
+                      <span className={`text-[8px] transition-transform ${pnlOpen ? 'rotate-90' : ''}`}>▸</span> 交易盈亏
+                    </button>
+                  )}
+                </div>
+                {/* Holdings detail */}
+                {detailOpen && (
                   <div className="px-3.5 pb-3.5 border-t border-border pt-3">
                     <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
                       <dt className="text-muted">持仓份额</dt><dd className="font-mono">{shares(p.totalShares)}</dd>
@@ -223,6 +239,23 @@ export default function DetailsPage() {
                       <RefreshButton onClick={() => refreshLatestNav([p.fundCode])} />
                       <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); setCalculatorPos(p) }}>调仓计算器</Button>
                     </div>
+                  </div>
+                )}
+                {/* Transaction P&L */}
+                {pnlOpen && (
+                  <div className="px-3.5 pb-3.5 border-t border-border pt-3">
+                    {txs.filter((t: Transaction) => t.fundCode === p.fundCode && (t.type === 'buy' || t.type === 'sell') && t.nav != null && t.nav > 0).sort((a: Transaction, b: Transaction) => b.tradeDate.localeCompare(a.tradeDate)).map((t: Transaction) => {
+                      const refPrice = isTradingHours() ? (p.estimateNav ?? p.latestNav) : p.latestNav
+                      const pct = refPrice > 0 ? ((refPrice - t.nav!) / t.nav! * 100) : 0
+                      return (
+                        <div key={t.id} className="flex items-center justify-between py-1.5 border-b border-dashed border-border last:border-b-0 text-xs">
+                          <span className="text-muted min-w-[44px]">{t.tradeDate.slice(5)}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full text-white text-center min-w-[28px] ${t.type === 'buy' ? 'bg-accent' : 'bg-warn'}`}>{t.type === 'buy' ? '买' : '卖'}</span>
+                          <span className="font-mono text-[11px] text-muted flex-1 text-center">{t.nav!.toFixed(4)} → {refPrice.toFixed(4)}</span>
+                          <span className={`font-mono text-[13px] font-semibold min-w-[52px] text-right ${pnlColor(pct)}`}>{percent(pct)}%</span>
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
               </div>
