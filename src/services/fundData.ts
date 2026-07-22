@@ -245,6 +245,10 @@ async function tryLoadStaticJSON(): Promise<boolean> {
   const resp = await fetch(snapshotUrl, { cache: 'no-cache' })
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 
+  // Use file's Last-Modified as the authoritative update time
+  const fileTime = resp.headers.get('Last-Modified')
+  const loadTime = fileTime ? new Date(fileTime).getTime() : Date.now()
+
   const raw: GZSnapshot = await resp.json()
   if (!raw.funds || raw.funds.length === 0) throw new Error('empty snapshot')
 
@@ -263,8 +267,8 @@ async function tryLoadStaticJSON(): Promise<boolean> {
   }
 
   fundGZCache = cache
-  cacheLoadTime = Date.now()
-  snapshotMeta = { gzrq: raw.gzrq, gxrq: raw.gxrq, loadTime: Date.now() }
+  cacheLoadTime = loadTime
+  snapshotMeta = { gzrq: raw.gzrq, gxrq: raw.gxrq, loadTime }
   fundGZLoading = null
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
   const sizeKB = Math.round(JSON.stringify(raw).length / 1024)
