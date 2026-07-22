@@ -167,9 +167,11 @@ const FUNDGZ_PAGE_SIZE = 23672  // 全量一次拉取
 const CACHE_TTL_TRADING = 5 * 60 * 1000   // 盘中 5 分钟刷新
 const CACHE_TTL_IDLE    = 30 * 60 * 1000  // 非交易时段 30 分钟
 
-/** Parse a numeric string, treating '---' (eastmoney no-data sentinel) as null */
+/** Parse a numeric string, treating non-numeric sentinels (---, --, etc.) as null */
 function parseNum(s?: string): number | undefined {
-  if (s == null || s === '' || s === '---') return undefined
+  if (s == null || s === '') return undefined
+  // Reject anything that isn't a plain number (e.g. '---', '--', 'N/A')
+  if (!/^-?\d/.test(s)) return undefined
   const n = parseFloat(s)
   return isNaN(n) ? undefined : n
 }

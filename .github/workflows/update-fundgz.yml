@@ -33,8 +33,12 @@ jobs:
           'gxrq': raw['Data']['gxrq'],
           'funds': []
       }
+      import re
       def clean(v):
-          return None if v in (None, '', '---') else v
+          if v is None or v == '': return None
+          if not re.match(r'^-?\d', str(v)): return None
+          try: float(v); return v
+          except: return None
       for f in raw['Data']['list']:
           out['funds'].append({
               'c': f['bzdm'],          # code
