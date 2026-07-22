@@ -1,9 +1,13 @@
 name: Update Fund Estimates
 on:
   schedule:
-    # Every 5 min Mon-Fri during A-share trading hours (9:30-15:00 CST = 1:30-7:00 UTC)
     - cron: '*/5 1-7 * * 1-5'
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: '手动更新原因'
+        required: false
+        default: 'Manual trigger'
 
 jobs:
   update:

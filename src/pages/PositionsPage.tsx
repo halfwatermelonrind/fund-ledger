@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import type { Position, Transaction } from '../types'
 import { useFundStore } from '../stores/useFundStore'
-import { isTradingHours } from '../services/fundData'
+import { isTradingHours, getSnapshotMeta, refreshEstimateCache } from '../services/fundData'
 import { showToast } from '../components/Toast'
 import Button from '../components/Button'
 import Badge from '../components/Badge'
@@ -9,7 +9,7 @@ import RefreshButton from '../components/RefreshButton'
 import SummaryCards from '../components/SummaryCards'
 import DataTable from '../components/DataTable'
 import { useIsPC } from '../hooks/useMediaQuery'
-import { money, moneySigned, shares, nav, percent, pnlColor, estimateTimeDisplay } from '../utils/format'
+import { money, moneySigned, shares, nav, percent, pnlColor } from '../utils/format'
 import { aggregatePositions } from '../utils/calculator'
 import type { NavEntry } from '../utils/calculator'
 import type { Column } from '../components/DataTable'
@@ -19,6 +19,17 @@ import type { SummarySlot } from '../components/SummaryCards'
 
 interface RefreshState {
   spinning: Set<string>
+}
+
+// ---- Snapshot time display ----
+
+function SnapshotTime() {
+  const meta = getSnapshotMeta()
+  if (!meta) return <span>数据未加载</span>
+  const date = meta.gxrq || meta.gzrq
+  const time = new Date(meta.loadTime)
+  const hhmm = `${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`
+  return <span>数据更新于 {date} {hhmm}</span>
 }
 
 // ---- Transaction type labels ----
@@ -181,8 +192,9 @@ export default function PositionsPage() {
 
   async function handleRefreshAll() {
     if (activePositions.length === 0) return
+    await refreshEstimateCache()
     await refreshLatestNav()
-    showToast('全部估值刷新完成', 'success')
+    showToast('估值数据已更新', 'success')
   }
 
   // ---- Inline NAV edit ----
@@ -394,9 +406,8 @@ export default function PositionsPage() {
         </div>
         <div className="text-[11px] text-muted mb-3 tracking-wider">
           {trading ? '盘中实时估值' : '非交易时段，实时估值不可用'}
-          {allPositions.some((p) => p.estimateTime) && (
-            <span className="ml-3">{estimateTimeDisplay(allPositions.find((p) => p.estimateTime)?.estimateTime)}</span>
-          )}
+          {' · '}
+          <SnapshotTime />
         </div>
 
         {/* ---- PC Table ---- */}

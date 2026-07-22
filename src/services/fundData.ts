@@ -160,6 +160,7 @@ interface FundGZEntry {
 let fundGZCache: Map<string, FundGZEntry> | null = null
 let fundGZLoading: Promise<void> | null = null
 let cacheLoadTime: number = 0
+let snapshotMeta: { gzrq: string; gxrq: string; loadTime: number } | null = null
 
 const FUNDGZ_CALLBACK = '__fundgz_cache_cb'
 const FUNDGZ_PAGE_SIZE = 23672  // 全量一次拉取
@@ -254,6 +255,7 @@ async function tryLoadStaticJSON(): Promise<boolean> {
 
   fundGZCache = cache
   cacheLoadTime = Date.now()
+  snapshotMeta = { gzrq: raw.gzrq, gxrq: raw.gxrq, loadTime: Date.now() }
   fundGZLoading = null
   const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
   const sizeKB = Math.round(JSON.stringify(raw).length / 1024)
@@ -506,6 +508,16 @@ export async function searchFundName(keyword: string): Promise<FundSearchItem[]>
 // ============================================================
 // isTradingHours — A 股交易时段判断
 // ============================================================
+
+/** Snapshot metadata — when the underlying data was published */
+export function getSnapshotMeta(): { gzrq: string; gxrq: string; loadTime: number } | null {
+  return snapshotMeta
+}
+
+/** Force reload the fund estimate cache (bypasses TTL) */
+export async function refreshEstimateCache(): Promise<void> {
+  await loadFundGZCache(true)
+}
 
 export function isTradingHours(): boolean {
   const now = new Date()
