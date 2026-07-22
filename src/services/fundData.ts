@@ -183,61 +183,126 @@ async function loadFundGZCache(force = false): Promise<void> {
       return
     }
 
-    // Dev: route through Vite proxy (rewrites Referer).
-    // Production: use direct API (works only from eastmoney Referer, so it will fail
-    // on GitHub Pages → falls back to pingzhongdata without intraday estimates.
-    // To get intraday estimates in production, deploy proxy/worker.js to Cloudflare
-    // Workers and set VITE_FUNDGZ_PROXY to the worker URL.)
-    const baseUrl = import.meta.env.VITE_FUNDGZ_PROXY
-      || (import.meta.env.DEV ? '/api/fundgz' : 'https://api.fund.eastmoney.com')
+    // Try sources in order:
+    //  1. Static JSON snapshot (GitHub Actions, same-origin — no Referer issue)
+    //  2. Vite dev proxy → direct API (works in local dev)
+    //  3. Falls back to pingzhongdata (confirmed NAV only)
+    let loaded = false
 
-    const url = [
-      `${baseUrl}/FundGuZhi/GetFundGZList`,
-      '?type=1&sort=3&orderType=desc&canbuy=0',
-      `&pageIndex=1&pageSize=${FUNDGZ_PAGE_SIZE}`,
-      `&callback=${FUNDGZ_CALLBACK}`,
-      `&_=${Date.now()}`,
-    ].join('')
-
-    const isRefresh = !!fundGZCache
-    console.log(`[fundData] ${isRefresh ? 'refreshing' : 'loading'} FundGuZhi cache (~13 MB)...`)
-    const t0 = Date.now()
-
+    // ---- Source 1: static snapshot from GitHub Actions ----
     try {
-      const raw = await jsonp<GZListResponse>(url, FUNDGZ_CALLBACK, 30_000) // 大文件给 30s
+      loaded = await tryLoadStaticJSON()
+    } catch (_) { /* fall through */ }
 
-      if (raw.ErrCode !== 0 || !raw.Data?.list) {
-        throw new Error(`FundGuZhi API ErrCode=${raw.ErrCode}`)
-      }
+    // ---- Source 2: JSONP direct API (dev proxy or direct) ----
+    if (!loaded) {
+      try {
+        loaded = await tryLoadJSONP()
+      } catch (_) { /* fall through */ }
+    }
 
-      const cache = new Map<string, FundGZEntry>()
-      for (const item of raw.Data.list) {
-        if (!item.bzdm || !item.jjjc) continue
-
-        cache.set(item.bzdm, {
-          name: item.jjjc,
-          nav: parseFloat(item.dwjz) || 0,
-          date: item.gzrq || '',
-          estimate: item.gsz != null && item.gsz !== '' ? parseFloat(item.gsz) : undefined,
-          change: item.gszzl != null && item.gszzl !== '' ? parseFloat(item.gszzl) : undefined,
-          navChange: item.jzzzl != null && item.jzzzl !== '' ? parseFloat(item.jzzzl) : undefined,
-          time: item.gxrq || '',
-        })
-      }
-
-      fundGZCache = cache
-      cacheLoadTime = Date.now()
+    // If neither worked, cache stays null → fetchLatestNav falls back to pingzhongdata
+    if (!loaded) {
+      console.warn('[fundData] FundGuZhi unavailable — estimates will not be available')
       fundGZLoading = null
-      const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
-      console.log(`[fundData] FundGuZhi cache ready: ${cache.size} funds in ${elapsed}s`)
-    } catch (err) {
-      fundGZLoading = null // 允许重试
-      const msg = err instanceof Error ? err.message : '未知错误'
-      throw new Error(`加载基金估值数据失败：${msg}`)
     }
   })()
 
   return fundGZLoading
+}
+
+// Compact JSON format produced by GitHub Actions workflow
+interface GZSnapshot {
+  gzrq: string
+  gxrq: string
+  funds: {
+    c: string         // code
+    n: string         // name
+    e?: string        // estimate NAV
+    ez?: string       // estimate change %
+    v: string         // confirmed NAV
+    vz?: string       // confirmed change %
+    d: string         // NAV date
+    t: string         // update time
+  }[]
+}
+
+async function tryLoadStaticJSON(): Promise<boolean> {
+  const snapshotUrl = import.meta.env.BASE_URL + 'data/fundgz.json'
+  console.log(`[fundData] trying static snapshot: ${snapshotUrl}`)
+  const t0 = Date.now()
+
+  const resp = await fetch(snapshotUrl, { cache: 'no-cache' })
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+
+  const raw: GZSnapshot = await resp.json()
+  if (!raw.funds || raw.funds.length === 0) throw new Error('empty snapshot')
+
+  const cache = new Map<string, FundGZEntry>()
+  for (const f of raw.funds) {
+    if (!f.c || !f.n) continue
+    cache.set(f.c, {
+      name: f.n,
+      nav: parseFloat(f.v) || 0,
+      date: f.d || raw.gzrq || '',
+      estimate: f.e != null && f.e !== '' ? parseFloat(f.e) : undefined,
+      change: f.ez != null && f.ez !== '' ? parseFloat(f.ez) : undefined,
+      navChange: f.vz != null && f.vz !== '' ? parseFloat(f.vz) : undefined,
+      time: f.t || raw.gxrq || '',
+    })
+  }
+
+  fundGZCache = cache
+  cacheLoadTime = Date.now()
+  fundGZLoading = null
+  const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
+  const sizeKB = Math.round(JSON.stringify(raw).length / 1024)
+  console.log(`[fundData] static snapshot loaded: ${cache.size} funds, ${sizeKB} KB in ${elapsed}s`)
+  return true
+}
+
+async function tryLoadJSONP(): Promise<boolean> {
+  const baseUrl = import.meta.env.VITE_FUNDGZ_PROXY
+    || (import.meta.env.DEV ? '/api/fundgz' : 'https://api.fund.eastmoney.com')
+
+  const url = [
+    `${baseUrl}/FundGuZhi/GetFundGZList`,
+    '?type=1&sort=3&orderType=desc&canbuy=0',
+    `&pageIndex=1&pageSize=${FUNDGZ_PAGE_SIZE}`,
+    `&callback=${FUNDGZ_CALLBACK}`,
+    `&_=${Date.now()}`,
+  ].join('')
+
+  const isRefresh = !!fundGZCache
+  console.log(`[fundData] ${isRefresh ? 'refreshing' : 'loading'} FundGuZhi via JSONP...`)
+  const t0 = Date.now()
+
+  const raw = await jsonp<GZListResponse>(url, FUNDGZ_CALLBACK, 30_000)
+
+  if (raw.ErrCode !== 0 || !raw.Data?.list) {
+    throw new Error(`FundGuZhi API ErrCode=${raw.ErrCode}`)
+  }
+
+  const cache = new Map<string, FundGZEntry>()
+  for (const item of raw.Data.list) {
+    if (!item.bzdm || !item.jjjc) continue
+    cache.set(item.bzdm, {
+      name: item.jjjc,
+      nav: parseFloat(item.dwjz) || 0,
+      date: item.gzrq || '',
+      estimate: item.gsz != null && item.gsz !== '' ? parseFloat(item.gsz) : undefined,
+      change: item.gszzl != null && item.gszzl !== '' ? parseFloat(item.gszzl) : undefined,
+      navChange: item.jzzzl != null && item.jzzzl !== '' ? parseFloat(item.jzzzl) : undefined,
+      time: item.gxrq || '',
+    })
+  }
+
+  fundGZCache = cache
+  cacheLoadTime = Date.now()
+  fundGZLoading = null
+  const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
+  console.log(`[fundData] JSONP cache ready: ${cache.size} funds in ${elapsed}s`)
+  return true
 }
 
 // ============================================================

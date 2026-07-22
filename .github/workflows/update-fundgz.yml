@@ -1,0 +1,58 @@
+name: Update Fund Estimates
+on:
+  schedule:
+    # Every 5 min Mon-Fri during A-share trading hours (9:30-15:00 CST = 1:30-7:00 UTC)
+    - cron: '*/5 1-7 * * 1-5'
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch FundGuZhi data
+        run: |
+          curl -s --max-time 60 \
+            "https://api.fund.eastmoney.com/FundGuZhi/GetFundGZList?type=1&sort=3&orderType=desc&canbuy=0&pageIndex=1&pageSize=23672" \
+            -H "Referer: https://fund.eastmoney.com/" \
+            | python3 -c "
+      import json, sys
+      raw = json.load(sys.stdin)
+      if raw.get('ErrCode') != 0:
+          print(f'API error: {raw}', file=sys.stderr)
+          sys.exit(1)
+      out = {
+          'gzrq': raw['Data']['gzrq'],
+          'gxrq': raw['Data']['gxrq'],
+          'funds': []
+      }
+      for f in raw['Data']['list']:
+          out['funds'].append({
+              'c': f['bzdm'],          # code
+              'n': f['jjjc'],          # name
+              'e': f.get('gsz'),        # estimate NAV
+              'ez': f.get('gszzl'),     # estimate change %
+              'v': f['dwjz'],           # confirmed NAV
+              'vz': f.get('jzzzl'),     # confirmed change %
+              'd': f['gzrq'],           # NAV date
+              't': f['gxrq'],           # update time
+          })
+      with open('docs/v3/data/fundgz.json', 'w') as fp:
+          json.dump(out, fp, separators=(',', ':'), ensure_ascii=False)
+      print(f'{len(out[\"funds\"])} funds written')
+      "
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/v3/data/fundgz.json
+          if git diff --staged --quiet; then
+            echo "No changes"
+          else
+            git commit -m "data: update fund estimates $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          fi
