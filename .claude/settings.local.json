@@ -141,7 +141,10 @@
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('Total:', d.get\\('TotalCount'\\)\\); print\\('Returned:', len\\(d.get\\('Data',{}\\).get\\('list',[]\\)\\)\\)\")",
       "Bash(python3 -c \"import json; d=json.load\\(open\\('/tmp/fundgz_https.json'\\)\\); print\\(f'Total: {d[\\\\\"TotalCount\\\\\"]}, list len: {len\\(d[\\\\\"Data\\\\\"][\\\\\"list\\\\\"]\\)}'\\)\")",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(f'Branch: {d.get\\(\\\\\"source\\\\\",{}\\).get\\(\\\\\"branch\\\\\"\\)}'\\); print\\(f'Path: {d.get\\(\\\\\"source\\\\\",{}\\).get\\(\\\\\"path\\\\\"\\)}'\\); print\\(f'URL: {d.get\\(\\\\\"html_url\\\\\"\\)}'\\); print\\(f'Status: {d.get\\(\\\\\"status\\\\\"\\)}'\\)\")",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(ping -c 2 -W 3 github.com)",
+      "Bash(nslookup github.com)",
+      "Bash(ssh -o ConnectTimeout=5 -T git@github.com)"
     ]
   }
 }

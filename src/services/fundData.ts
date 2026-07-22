@@ -183,8 +183,16 @@ async function loadFundGZCache(force = false): Promise<void> {
       return
     }
 
+    // Dev: route through Vite proxy (rewrites Referer).
+    // Production: use direct API (works only from eastmoney Referer, so it will fail
+    // on GitHub Pages → falls back to pingzhongdata without intraday estimates.
+    // To get intraday estimates in production, deploy proxy/worker.js to Cloudflare
+    // Workers and set VITE_FUNDGZ_PROXY to the worker URL.)
+    const baseUrl = import.meta.env.VITE_FUNDGZ_PROXY
+      || (import.meta.env.DEV ? '/api/fundgz' : 'https://api.fund.eastmoney.com')
+
     const url = [
-      'https://api.fund.eastmoney.com/FundGuZhi/GetFundGZList',
+      `${baseUrl}/FundGuZhi/GetFundGZList`,
       '?type=1&sort=3&orderType=desc&canbuy=0',
       `&pageIndex=1&pageSize=${FUNDGZ_PAGE_SIZE}`,
       `&callback=${FUNDGZ_CALLBACK}`,
