@@ -329,12 +329,13 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   }
 
   // ---- Step 1: 尝试从 FundGuZhi 缓存获取 ----
+  let fromCache: FundNavData | null = null
   try {
     await loadFundGZCache()
     const entry = fundGZCache?.get(fundCode)
 
     if (entry && entry.name) {
-      return {
+      fromCache = {
         name: entry.name,
         nav: entry.nav,
         date: entry.date,
@@ -344,47 +345,85 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
         time: entry.time,
       }
     }
-
-    console.log(`[fundData] ${fundCode} not in FundGuZhi cache, trying pingzhongdata...`)
   } catch (_cacheErr) {
-    console.warn(`[fundData] FundGuZhi cache unavailable, falling back to pingzhongdata`)
+    console.warn(`[fundData] FundGuZhi cache unavailable`)
   }
 
-  // ---- Step 2: 降级到 pingzhongdata（无实时估值）----
+  // ---- Step 2: QDII 等基金 navChange 缺失时，从 pingzhongdata 补充 ----
+  if (fromCache && fromCache.navChange == null) {
+    const supplement = await trySupplementFromPingzhong(fundCode)
+    if (supplement) {
+      fromCache.navChange = supplement.navChange
+      // Use pingzhongdata NAV if it's more recent
+      if (supplement.date > fromCache.date) {
+        fromCache.nav = supplement.nav
+        fromCache.date = supplement.date
+      }
+    }
+  }
+
+  if (fromCache) return fromCache
+
+  // ---- Step 3: 缓存完全未命中，降级到 pingzhongdata ----
+  try {
+    const fallback = await tryPingzhongFull(fundCode)
+    if (fallback) return fallback
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '未知错误'
+    throw new Error(`无法获取基金 ${fundCode} 的数据：${msg}`)
+  }
+
+  throw new Error(`无法获取基金 ${fundCode} 的数据`)
+}
+
+/** Fetch the last 2 NAV points from pingzhongdata to compute navChange */
+async function trySupplementFromPingzhong(fundCode: string): Promise<{ nav: number; date: string; navChange?: number } | null> {
+  if (!isBrowser) return null
   try {
     const url = `https://fund.eastmoney.com/pingzhongdata/${fundCode}.js?v=${Date.now()}`
     await injectScript(url)
-
-    const eastName = (window as any).fS_name as string | undefined
     const trend = (window as any).Data_netWorthTrend as NetWorthPoint[] | undefined
-
-    if (!eastName || !trend || trend.length === 0) {
-      throw new Error('pingzhongdata 无数据')
-    }
+    if (!trend || trend.length < 2) return null
 
     const latest = trend[trend.length - 1]
     const d = new Date(latest.x + 8 * 60 * 60 * 1000)
     const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
 
-    let navChange: number | undefined
-    if (trend.length >= 2) {
-      const prev = trend[trend.length - 2]
-      if (prev.y > 0) {
-        navChange = Math.round((latest.y - prev.y) / prev.y * 10000) / 100
-      }
-    }
+    const prev = trend[trend.length - 2]
+    const navChange = prev.y > 0
+      ? Math.round((latest.y - prev.y) / prev.y * 10000) / 100
+      : undefined
 
-    return {
-      name: eastName,
-      nav: latest.y,
-      date,
-      navChange,
-      // 无实时估值
-    }
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : '未知错误'
-    throw new Error(`无法获取基金 ${fundCode} 的数据：${msg}`)
+    return { nav: latest.y, date, navChange }
+  } catch {
+    return null
   }
+}
+
+/** Full fallback when fund is not in FundGuZhi cache at all */
+async function tryPingzhongFull(fundCode: string): Promise<FundNavData | null> {
+  if (!isBrowser) return null
+  const url = `https://fund.eastmoney.com/pingzhongdata/${fundCode}.js?v=${Date.now()}`
+  await injectScript(url)
+
+  const eastName = (window as any).fS_name as string | undefined
+  const trend = (window as any).Data_netWorthTrend as NetWorthPoint[] | undefined
+
+  if (!eastName || !trend || trend.length === 0) return null
+
+  const latest = trend[trend.length - 1]
+  const d = new Date(latest.x + 8 * 60 * 60 * 1000)
+  const date = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+
+  let navChange: number | undefined
+  if (trend.length >= 2) {
+    const prev = trend[trend.length - 2]
+    if (prev.y > 0) {
+      navChange = Math.round((latest.y - prev.y) / prev.y * 10000) / 100
+    }
+  }
+
+  return { name: eastName, nav: latest.y, date, navChange }
 }
 
 // ============================================================
