@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import type { Transaction, Position } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { aggregatePositions } from '../utils/calculator'
-import { isTradingHours } from '../services/fundData'
+import { isTradingHours, getSnapshotMeta, refreshEstimateCache } from '../services/fundData'
 import Button from '../components/Button'
 import RefreshButton from '../components/RefreshButton'
 import DataTable from '../components/DataTable'
@@ -106,17 +106,34 @@ export default function DetailsPage() {
 
   const [sortKey, setSortKey] = useState<string>('mv')
   const [sortDir, setSortDir] = useState<1 | -1>(-1)
-  const [updateTime, setUpdateTime] = useState('')
   const [calculatorPos, setCalculatorPos] = useState<Position | null>(null)
   const [expandedDetail, setExpandedDetail] = useState<string | null>(null)
   const [expandedPnl, setExpandedPnl] = useState<string | null>(null)
   const [clearedOpen, setClearedOpen] = useState(false)
+  const [, setTick] = useState(0)
+
+  function getUpdateTimeStr(): string {
+    const m = getSnapshotMeta()
+    if (!m) return ''
+    const date = m.gxrq || m.gzrq
+    const t = new Date(m.loadTime)
+    const hm = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`
+    return `数据更新于 ${date} ${hm}`
+  }
+
+  async function handleRefresh() {
+    await refreshEstimateCache()
+    await refreshLatestNav()
+    setTick((n) => n + 1)
+  }
 
   // Auto-refresh valuations on mount
   useEffect(() => {
     const codes = [...new Set(txs.map((t) => t.fundCode))]
     if (codes.length === 0) return
-    refreshLatestNav(codes).then(() => setUpdateTime(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })))
+    refreshEstimateCache().then(() => {
+      refreshLatestNav(codes).then(() => setTick((n) => n + 1))
+    })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sortedActive = useMemo(() => {
@@ -167,9 +184,9 @@ export default function DetailsPage() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-base font-semibold tracking-wider text-fg">持仓明细</h2>
-          {updateTime && <span className="text-[11px] text-muted">数据更新于 {updateTime}</span>}
+          <span className="text-[11px] text-muted">{getUpdateTimeStr()}</span>
         </div>
-        <Button size="sm" onClick={() => refreshLatestNav().then(() => setUpdateTime(new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })))}>刷新估值</Button>
+        <Button size="sm" onClick={handleRefresh}>刷新估值</Button>
       </div>
 
       {/* Mobile sort bar */}
