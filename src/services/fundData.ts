@@ -349,12 +349,16 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     console.warn(`[fundData] FundGuZhi cache unavailable`)
   }
 
-  // ---- Step 2: QDII 等基金 navChange 缺失时，从 pingzhongdata 补充 ----
-  if (fromCache && fromCache.navChange == null) {
+  // ---- Step 2: 从 pingzhongdata 补充最新净值和涨跌幅 ----
+  // FundGuZhi 快照可能滞后（gzrq 仍是昨天），pingzhongdata 经常已有今天净值
+  if (fromCache) {
     const supplement = await trySupplementFromPingzhong(fundCode)
     if (supplement) {
-      fromCache.navChange = supplement.navChange
-      // Use pingzhongdata NAV if it's more recent
+      // navChange: prefer API value if available, else compute from pingzhongdata
+      if (fromCache.navChange == null) {
+        fromCache.navChange = supplement.navChange
+      }
+      // NAV: always use the more recent one
       if (supplement.date > fromCache.date) {
         fromCache.nav = supplement.nav
         fromCache.date = supplement.date
