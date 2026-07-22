@@ -145,7 +145,10 @@
       "Bash(ping -c 2 -W 3 github.com)",
       "Bash(nslookup github.com)",
       "Bash(ssh -o ConnectTimeout=5 -T git@github.com)",
-      "Bash(gh workflow *)"
+      "Bash(gh workflow *)",
+      "Bash(ping -c 1 -W 3 halfwatermelonrind.github.io)",
+      "Bash(nslookup halfwatermelonrind.github.io)",
+      "Bash(grep *)"
     ]
   }
 }

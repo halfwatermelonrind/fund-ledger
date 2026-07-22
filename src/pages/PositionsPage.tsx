@@ -24,8 +24,19 @@ interface RefreshState {
 // ---- Snapshot time display ----
 
 function SnapshotTime() {
-  const meta = getSnapshotMeta()
-  if (!meta) return <span>数据未加载</span>
+  const [meta, setMeta] = useState(getSnapshotMeta())
+  useEffect(() => {
+    // poll until snapshot is loaded, then track
+    const id = setInterval(() => {
+      const m = getSnapshotMeta()
+      if (m) { setMeta(m); clearInterval(id) }
+    }, 200)
+    return () => clearInterval(id)
+  }, [])
+  // also refresh on every positions update
+  useEffect(() => { setMeta(getSnapshotMeta()) })
+
+  if (!meta) return <span>快照数据加载中…</span>
   const date = meta.gxrq || meta.gzrq
   const time = new Date(meta.loadTime)
   const hhmm = `${String(time.getHours()).padStart(2, '0')}:${String(time.getMinutes()).padStart(2, '0')}`
