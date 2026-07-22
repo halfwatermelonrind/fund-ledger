@@ -159,17 +159,27 @@ interface FundGZEntry {
 
 let fundGZCache: Map<string, FundGZEntry> | null = null
 let fundGZLoading: Promise<void> | null = null
+let cacheLoadTime: number = 0
 
 const FUNDGZ_CALLBACK = '__fundgz_cache_cb'
 const FUNDGZ_PAGE_SIZE = 23672  // 全量一次拉取
+const CACHE_TTL_TRADING = 5 * 60 * 1000   // 盘中 5 分钟刷新
+const CACHE_TTL_IDLE    = 30 * 60 * 1000  // 非交易时段 30 分钟
 
-async function loadFundGZCache(): Promise<void> {
-  if (fundGZCache) return
+function isCacheExpired(): boolean {
+  if (!fundGZCache) return true
+  const ttl = isTradingHours() ? CACHE_TTL_TRADING : CACHE_TTL_IDLE
+  return Date.now() - cacheLoadTime > ttl
+}
+
+async function loadFundGZCache(force = false): Promise<void> {
+  if (!force && fundGZCache && !isCacheExpired()) return
   if (fundGZLoading) return fundGZLoading
 
   fundGZLoading = (async () => {
     if (!isBrowser) {
       fundGZCache = buildMockCache()
+      cacheLoadTime = Date.now()
       return
     }
 
@@ -181,7 +191,8 @@ async function loadFundGZCache(): Promise<void> {
       `&_=${Date.now()}`,
     ].join('')
 
-    console.log('[fundData] loading full FundGuZhi cache (~13 MB)...')
+    const isRefresh = !!fundGZCache
+    console.log(`[fundData] ${isRefresh ? 'refreshing' : 'loading'} FundGuZhi cache (~13 MB)...`)
     const t0 = Date.now()
 
     try {
@@ -207,6 +218,8 @@ async function loadFundGZCache(): Promise<void> {
       }
 
       fundGZCache = cache
+      cacheLoadTime = Date.now()
+      fundGZLoading = null
       const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
       console.log(`[fundData] FundGuZhi cache ready: ${cache.size} funds in ${elapsed}s`)
     } catch (err) {
