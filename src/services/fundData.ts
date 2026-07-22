@@ -167,6 +167,13 @@ const FUNDGZ_PAGE_SIZE = 23672  // 全量一次拉取
 const CACHE_TTL_TRADING = 5 * 60 * 1000   // 盘中 5 分钟刷新
 const CACHE_TTL_IDLE    = 30 * 60 * 1000  // 非交易时段 30 分钟
 
+/** Parse a numeric string, treating '---' (eastmoney no-data sentinel) as null */
+function parseNum(s?: string): number | undefined {
+  if (s == null || s === '' || s === '---') return undefined
+  const n = parseFloat(s)
+  return isNaN(n) ? undefined : n
+}
+
 function isCacheExpired(): boolean {
   if (!fundGZCache) return true
   const ttl = isTradingHours() ? CACHE_TTL_TRADING : CACHE_TTL_IDLE
@@ -244,11 +251,11 @@ async function tryLoadStaticJSON(): Promise<boolean> {
     if (!f.c || !f.n) continue
     cache.set(f.c, {
       name: f.n,
-      nav: parseFloat(f.v) || 0,
+      nav: parseNum(f.v) ?? 0,
       date: f.d || raw.gzrq || '',
-      estimate: f.e != null && f.e !== '' ? parseFloat(f.e) : undefined,
-      change: f.ez != null && f.ez !== '' ? parseFloat(f.ez) : undefined,
-      navChange: f.vz != null && f.vz !== '' ? parseFloat(f.vz) : undefined,
+      estimate: parseNum(f.e),
+      change: parseNum(f.ez),
+      navChange: parseNum(f.vz),
       time: f.t || raw.gxrq || '',
     })
   }
@@ -292,9 +299,9 @@ async function tryLoadJSONP(): Promise<boolean> {
       name: item.jjjc,
       nav: parseFloat(item.dwjz) || 0,
       date: item.gzrq || '',
-      estimate: item.gsz != null && item.gsz !== '' ? parseFloat(item.gsz) : undefined,
-      change: item.gszzl != null && item.gszzl !== '' ? parseFloat(item.gszzl) : undefined,
-      navChange: item.jzzzl != null && item.jzzzl !== '' ? parseFloat(item.jzzzl) : undefined,
+      estimate: parseNum(item.gsz),
+      change: parseNum(item.gszzl),
+      navChange: parseNum(item.jzzzl),
       time: item.gxrq || '',
     })
   }

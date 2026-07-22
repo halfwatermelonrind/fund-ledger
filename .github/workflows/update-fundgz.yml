@@ -33,16 +33,18 @@ jobs:
           'gxrq': raw['Data']['gxrq'],
           'funds': []
       }
+      def clean(v):
+          return None if v in (None, '', '---') else v
       for f in raw['Data']['list']:
           out['funds'].append({
               'c': f['bzdm'],          # code
               'n': f['jjjc'],          # name
-              'e': f.get('gsz'),        # estimate NAV
-              'ez': f.get('gszzl'),     # estimate change %
-              'v': f['dwjz'],           # confirmed NAV
-              'vz': f.get('jzzzl'),     # confirmed change %
-              'd': f['gzrq'],           # NAV date
-              't': f['gxrq'],           # update time
+              'e': clean(f.get('gsz')),    # estimate NAV
+              'ez': clean(f.get('gszzl')), # estimate change %
+              'v': f['dwjz'],              # confirmed NAV
+              'vz': clean(f.get('jzzzl')), # confirmed change %
+              'd': f['gzrq'],              # NAV date
+              't': f['gxrq'],              # update time
           })
       with open('docs/v3/data/fundgz.json', 'w') as fp:
           json.dump(out, fp, separators=(',', ':'), ensure_ascii=False)
