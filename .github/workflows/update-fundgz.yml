@@ -35,8 +35,9 @@ jobs:
 
           def clean(v):
               if v is None or v == '': return None
-              if not re.match(r'^-?\d', str(v)): return None
-              try: float(v); return v
+              s = str(v).rstrip('%')
+              if not re.match(r'^-?\d', s): return None
+              try: float(s); return s
               except: return None
 
           out = {
