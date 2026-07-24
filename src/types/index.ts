@@ -23,6 +23,10 @@ export interface Transaction {
   feeRate: number // e.g. 0.0015 = 0.15%
   fee?: number // 手续费金额（元），自动计算后可手动修改
   navSource: NavSource
+  /** Quick-sell: linked buy transaction ID (sell → buy) */
+  linkedBuyId?: string
+  /** Quick-sell: per-trade P&L = (sell nav - buy nav) * sell shares */
+  tradePnL?: number
   createdAt: number
   updatedAt: number
 }

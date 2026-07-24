@@ -284,6 +284,15 @@ export const useFundStore = create<FundStore>()(
               if (updated.fee == null && updated.feeRate > 0) {
                 updated.fee = Math.round(updated.shares * nav * updated.feeRate * 100) / 100
               }
+              // Compute per-trade P&L for linked quick-sell
+              if (updated.linkedBuyId) {
+                const buyTx = state.transactions.find((t) => t.id === updated.linkedBuyId)
+                if (buyTx?.nav != null) {
+                  updated.tradePnL = Math.round(
+                    (nav - buyTx.nav) * updated.shares * 100,
+                  ) / 100
+                }
+              }
             }
 
             return updated
