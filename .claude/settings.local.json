@@ -149,7 +149,8 @@
       "Bash(ping -c 1 -W 3 halfwatermelonrind.github.io)",
       "Bash(nslookup halfwatermelonrind.github.io)",
       "Bash(grep *)",
-      "Bash(gh run *)"
+      "Bash(gh run *)",
+      "Bash(python3 *)"
     ]
   }
 }
