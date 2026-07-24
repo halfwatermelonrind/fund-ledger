@@ -21,6 +21,7 @@ const filterPills = [{ key: 'all', label: '全部' }, { key: 'buy', label: '买�
 
 export default function RecordPage() {
   const storeTransactions = useFundStore((s) => s.transactions)
+  const addTransaction = useFundStore((s) => s.addTransaction)
   const deleteTransaction = useFundStore((s) => s.deleteTransaction)
   const batchFillNav = useFundStore((s) => s.batchFillNav)
   const exportData = useFundStore((s) => s.exportData)
@@ -45,6 +46,25 @@ export default function RecordPage() {
   const sheetRef = useRef<HTMLDivElement>(null)
   const [clearOpen, setClearOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [quickSellTx, setQuickSellTx] = useState<Transaction | null>(null)
+
+  function handleQuickSell() {
+    if (!quickSellTx) return
+    const sellShares = quickSellTx.confirmedShares ?? 0
+    const today = new Date().toISOString().slice(0, 10)
+    addTransaction({
+      fundCode: quickSellTx.fundCode,
+      fundName: quickSellTx.fundName,
+      tradeDate: today,
+      channel: quickSellTx.channel,
+      feeRate: quickSellTx.feeRate,
+      type: 'sell',
+      shares: sellShares,
+      navSource: 'pending',
+    })
+    showToast(`已录入 ${quickSellTx.fundName} 卖出 ${sellShares} 份`, 'success')
+    setQuickSellTx(null)
+  }
 
   const handleExport = useCallback(() => {
     const txs = useFundStore.getState().transactions
@@ -83,7 +103,7 @@ export default function RecordPage() {
     { key: 'nav', title: '净值', mono: true, render: (t) => t.nav != null ? fmtNav(t.nav) : <span className="text-warn">—</span> },
     { key: 'confirm', title: '确认份额/到账', mono: true, render: (t) => t.type === 'sell' ? (t.amount != null ? <span className="text-loss font-medium">{money(t.amount)} 元</span> : '—') : (t.confirmedShares != null ? `${shares(t.confirmedShares)} 份` : '—') },
     { key: 'status', title: '状态', render: (t) => <Badge status={t.navSource === 'pending' ? 'pending' : t.navSource === 'init' ? 'init' : 'confirmed'} /> },
-    { key: 'actions', title: '操作', render: (t) => (<div className="flex gap-1">{t.navSource === 'pending' ? <Button variant="ghost" size="xs" onClick={() => { setBackfillId(t.id); setBackfillNav('') }}>回填</Button> : <Button variant="ghost" size="xs" onClick={() => { sessionStorage.setItem('edit-tx-id', t.id); openSheet() }}>编辑</Button>}<Button variant="danger" size="xs" onClick={() => setDeleteId(t.id)}>删除</Button></div>) },
+    { key: 'actions', title: '操作', render: (t) => (<div className="flex gap-1">{t.navSource === 'pending' ? <Button variant="ghost" size="xs" onClick={() => { setBackfillId(t.id); setBackfillNav('') }}>回填</Button> : <Button variant="ghost" size="xs" onClick={() => { sessionStorage.setItem('edit-tx-id', t.id); openSheet() }}>编辑</Button>}{t.type === 'buy' && t.confirmedShares != null && t.confirmedShares > 0 && <Button variant="warn" size="xs" onClick={() => setQuickSellTx(t)}>卖出</Button>}<Button variant="danger" size="xs" onClick={() => setDeleteId(t.id)}>删除</Button></div>) },
   ]
 
   return (
@@ -126,7 +146,7 @@ export default function RecordPage() {
                   {expanded && (
                     <div className="px-3.5 pb-3.5 border-t border-border pt-3">
                       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs"><dt className="text-muted">交易日期</dt><dd className="font-mono">{t.tradeDate}</dd><dt className="text-muted">单位净值</dt><dd className="font-mono">{t.nav != null ? fmtNav(t.nav) : '—'}</dd><dt className="text-muted">确认份额</dt><dd className="font-mono">{t.confirmedShares != null ? shares(t.confirmedShares) : '—'}</dd><dt className="text-muted">代销渠道</dt><dd>{t.channel}</dd><dt className="text-muted">交易费率</dt><dd className="font-mono">{(t.feeRate * 100).toFixed(2)}%</dd>{t.fee != null && <><dt className="text-muted">手续费</dt><dd className="font-mono">{money(t.fee)} 元</dd></>}</dl>
-                      <div className="flex gap-2 mt-3">{isPending ? <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); setBackfillId(t.id); setBackfillNav('') }}>回填</Button> : <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); sessionStorage.setItem('edit-tx-id', t.id); openSheet() }}>编辑</Button>}<Button variant="primary" size="xs" onClick={(e) => { e.stopPropagation(); openSheet(t.fundCode) }}>再买一笔</Button><Button variant="danger" size="xs" onClick={(e) => { e.stopPropagation(); setDeleteId(t.id) }}>删除</Button></div>
+                      <div className="flex gap-2 mt-3">{isPending ? <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); setBackfillId(t.id); setBackfillNav('') }}>回填</Button> : <Button variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); sessionStorage.setItem('edit-tx-id', t.id); openSheet() }}>编辑</Button>}<Button variant="primary" size="xs" onClick={(e) => { e.stopPropagation(); openSheet(t.fundCode) }}>再买一笔</Button>{t.type === 'buy' && t.confirmedShares != null && t.confirmedShares > 0 && <Button variant="warn" size="xs" onClick={(e) => { e.stopPropagation(); setQuickSellTx(t) }}>卖出</Button>}<Button variant="danger" size="xs" onClick={(e) => { e.stopPropagation(); setDeleteId(t.id) }}>删除</Button></div>
                     </div>
                   )}
                 </div>
@@ -148,6 +168,7 @@ export default function RecordPage() {
       <ConfirmDialog open={deleteId !== null} title="确认删除" message="确定要删除这条交易记录吗？" onConfirm={() => { if (deleteId) { deleteTransaction(deleteId); showToast('已删除', 'info') } setDeleteId(null) }} onCancel={() => setDeleteId(null)} />
       <ConfirmDialog open={clearOpen} title="清除所有数据" message="确定要删除所有本地交易记录和缓存数据吗？此操作不可撤销。建议先导出备份。" confirmLabel="确认清除" onConfirm={handleClear} onCancel={() => setClearOpen(false)} />
       {importOpen && <BatchImportModal open={importOpen} onClose={() => setImportOpen(false)} />}
+      <ConfirmDialog open={quickSellTx !== null} title="快捷卖出" message={quickSellTx ? `基金：${quickSellTx.fundName}（${quickSellTx.fundCode}）\n卖出份额：${quickSellTx.confirmedShares ?? 0} 份\n渠道：${quickSellTx.channel}\n日期：${new Date().toISOString().slice(0, 10)}` : ''} confirmLabel="确认录入" onConfirm={handleQuickSell} onCancel={() => setQuickSellTx(null)} />
       {backfillId && (
         <div className="fixed inset-0 bg-black/40 z-[1500] flex items-center justify-center p-4" onClick={(e) => { if (e.target === e.currentTarget) setBackfillId(null) }}>
           <div className="bg-surface rounded-lg p-6 max-w-[400px] w-full shadow-[0_20px_60px_rgba(0,0,0,0.2)]"><h3 className="text-base font-semibold mb-3">手动回填净值</h3><div className="text-sm text-muted mb-4">基金：{transactions.find((t) => t.id === backfillId)?.fundName ?? '—'}<br/>日期：{transactions.find((t) => t.id === backfillId)?.tradeDate ?? '—'}</div><label className="block text-[13px] font-medium text-fg mb-1">单位净值</label><input className="w-full h-10 px-3 text-sm font-mono border border-accent rounded-sm outline-none" type="number" step="0.0001" min="0" value={backfillNav} onChange={(e) => setBackfillNav(e.target.value)} placeholder="输入净值" autoFocus /><div className="flex gap-2 justify-end mt-5"><Button variant="secondary" size="sm" onClick={() => setBackfillId(null)}>取消</Button><Button size="sm" onClick={confirmBackfill}>确认回填</Button></div></div>
