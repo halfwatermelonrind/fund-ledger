@@ -122,9 +122,13 @@ export default function DetailsPage() {
   }
 
   async function handleRefresh() {
-    await refreshEstimateCache()
-    await refreshLatestNav()
-    setTick((n) => n + 1)
+    try {
+      await refreshEstimateCache()
+      await refreshLatestNav()
+      setTick((n) => n + 1)
+    } catch (e) {
+      console.error('[DetailsPage] refresh failed:', e)
+    }
   }
 
   // Auto-refresh valuations on mount

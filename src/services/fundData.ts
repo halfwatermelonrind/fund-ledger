@@ -358,17 +358,17 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   }
 
   // ---- Step 2: 从 pingzhongdata 补充最新净值和涨跌幅 ----
-  // QDII 等基金 FundGuZhi 可能 dwjz=---（navIsValid=false），必须从 pingzhongdata 补充
+  // FundGuZhi 快照可能滞后（尤其15:00后今日净值出炉），pingzhongdata 经常有更新数据。
+  // 仅在快照数据超过 30 分钟或 NAV 无效时才补调，避免每次查询都额外请求。
   if (fromCache) {
-    const needSupplement = !fromCache.navIsValid || fromCache.navChange == null
+    const cacheAge = Date.now() - cacheLoadTime
+    const needSupplement = !fromCache.navIsValid || fromCache.navChange == null || cacheAge > 30 * 60 * 1000
     if (needSupplement) {
       const supplement = await trySupplementFromPingzhong(fundCode)
       if (supplement) {
-        // navChange: prefer API value if available, else compute from pingzhongdata
         if (fromCache.navChange == null) {
           fromCache.navChange = supplement.navChange
         }
-        // NAV: use pingzhongdata if FundGuZhi had no valid NAV, or if it's newer
         if (!fromCache.navIsValid || supplement.date > fromCache.date) {
           fromCache.nav = supplement.nav
           fromCache.date = supplement.date
