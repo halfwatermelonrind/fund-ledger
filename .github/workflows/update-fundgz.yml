@@ -1,7 +1,7 @@
 name: Update Fund Estimates
 on:
   schedule:
-    - cron: '*/5 1-7 * * 1-5'
+    - cron: '*/5 * * * 1-5'
   workflow_dispatch:
     inputs:
       reason:
