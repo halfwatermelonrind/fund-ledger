@@ -238,11 +238,11 @@ interface GZSnapshot {
 }
 
 async function tryLoadStaticJSON(): Promise<boolean> {
-  const snapshotUrl = import.meta.env.BASE_URL + 'data/fundgz.json'
+  const snapshotUrl = import.meta.env.BASE_URL + 'data/fundgz.json?_=' + Date.now()
   console.log(`[fundData] trying static snapshot: ${snapshotUrl}`)
   const t0 = Date.now()
 
-  const resp = await fetch(snapshotUrl, { cache: 'no-cache' })
+  const resp = await fetch(snapshotUrl, { cache: 'no-store' })
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 
   // Use file's Last-Modified as the authoritative update time
