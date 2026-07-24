@@ -13,13 +13,22 @@ const CHANNELS = ['支付宝', '天天基金', '理财通', '招商银行', '平
 interface FormState { fundCode: string; fundName: string; tradeDate: string; nav: string; buyAmount: string; sellShares: string; dividendAmount: string; reinvestAmount: string; channel: string; feeRate: string; fee: string }
 const emptyForm: FormState = { fundCode: '', fundName: '', tradeDate: new Date().toISOString().slice(0, 10), nav: '', buyAmount: '', sellShares: '', dividendAmount: '', reinvestAmount: '', channel: '支付宝', feeRate: '0.15', fee: '' }
 
+export interface SellPrefill {
+  fundCode: string
+  fundName: string
+  shares: number
+  channel: string
+  linkedBuyId: string  // link back to the buy transaction
+}
+
 interface Props {
   editId: string | null
   prefilledCode?: string
+  sellPrefill?: SellPrefill
   onClose: () => void
 }
 
-export default function EntrySheet({ editId: initialEditId, prefilledCode, onClose }: Props) {
+export default function EntrySheet({ editId: initialEditId, prefilledCode, sellPrefill, onClose }: Props) {
   const { transactions, addTransaction, updateTransaction } = useFundStore()
   const positions = useMemo(() => aggregatePositions(transactions, {}), [transactions])
 
@@ -48,6 +57,19 @@ export default function EntrySheet({ editId: initialEditId, prefilledCode, onClo
       setForm((f) => ({ ...f, fundCode: prefilledCode }))
     }
   }, [prefilledCode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Prefill sell from buy (quick sell)
+  useEffect(() => {
+    if (!sellPrefill) return
+    setTxType('sell')
+    setForm((f) => ({
+      ...f,
+      fundCode: sellPrefill.fundCode,
+      fundName: sellPrefill.fundName,
+      sellShares: String(sellPrefill.shares),
+      channel: sellPrefill.channel,
+    }))
+  }, [sellPrefill])
 
   async function lookupFund(code: string) {
     if (code.length !== 6 || !/^\d{6}$/.test(code)) return
@@ -94,7 +116,7 @@ export default function EntrySheet({ editId: initialEditId, prefilledCode, onClo
       else addTransaction({ ...base, type: 'buy', amount: amt, nav: navRaw, fee, shares: undefined, confirmedShares: hasNav ? Math.round(net / navRaw! * 100) / 100 : undefined }) }
     else if (txType === 'sell') { const sh = parseFloat(form.sellShares); if (!sh || sh <= 0) { showToast('请填写卖出份额', 'error'); return }; const pos = positions.find((p) => p.fundCode === code && !p.isCleared); if (pos && sh > pos.totalShares) { showToast('卖出份额超出持仓', 'error'); return }; const fee = manualFee ?? (hasNav && feeRate > 0 ? calcSellFee(sh, navRaw!) : undefined); const net = hasNav ? Math.round(sh * navRaw! * (1 - feeRate) * 100) / 100 : undefined
       if (editId) updateTransaction(editId, { ...base, type: 'sell', shares: sh, nav: navRaw, fee, amount: net })
-      else addTransaction({ ...base, type: 'sell', shares: sh, nav: navRaw, fee, amount: net }) }
+      else addTransaction({ ...base, type: 'sell', shares: sh, nav: navRaw, fee, amount: net, linkedBuyId: sellPrefill?.linkedBuyId }) }
     else if (txType === 'dividend_cash') { const amt = parseFloat(form.dividendAmount); if (!amt || amt <= 0) { showToast('请填写分红金额', 'error'); return }
       if (editId) updateTransaction(editId, { ...base, type: 'dividend_cash', amount: amt, navSource: 'manual' })
       else addTransaction({ ...base, type: 'dividend_cash', amount: amt, navSource: 'manual' }) }
