@@ -149,12 +149,13 @@ interface GZListResponse {
 
 interface FundGZEntry {
   name: string
-  nav: number          // dwjz
+  nav: number          // dwjz (0 if API returned ---)
   date: string         // gzrq
   estimate?: number    // gsz
   change?: number      // gszzl
   navChange?: number   // jzzzl
   time: string         // gxrq
+  navIsValid: boolean  // true if API actually provided dwjz
 }
 
 let fundGZCache: Map<string, FundGZEntry> | null = null
@@ -263,6 +264,8 @@ async function tryLoadStaticJSON(): Promise<boolean> {
       change: parseNum(f.ez),
       navChange: parseNum(f.vz),
       time: f.t || raw.gxrq || '',
+      // Track whether the confirmed NAV was actually present
+      navIsValid: parseNum(f.v) != null,
     })
   }
 
@@ -303,12 +306,13 @@ async function tryLoadJSONP(): Promise<boolean> {
     if (!item.bzdm || !item.jjjc) continue
     cache.set(item.bzdm, {
       name: item.jjjc,
-      nav: parseFloat(item.dwjz) || 0,
+      nav: parseNum(item.dwjz) ?? 0,
       date: item.gzrq || '',
       estimate: parseNum(item.gsz),
       change: parseNum(item.gszzl),
       navChange: parseNum(item.jzzzl),
       time: item.gxrq || '',
+      navIsValid: parseNum(item.dwjz) != null,
     })
   }
 
@@ -354,18 +358,21 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   }
 
   // ---- Step 2: 从 pingzhongdata 补充最新净值和涨跌幅 ----
-  // FundGuZhi 快照可能滞后（gzrq 仍是昨天），pingzhongdata 经常已有今天净值
+  // QDII 等基金 FundGuZhi 可能 dwjz=---（navIsValid=false），必须从 pingzhongdata 补充
   if (fromCache) {
-    const supplement = await trySupplementFromPingzhong(fundCode)
-    if (supplement) {
-      // navChange: prefer API value if available, else compute from pingzhongdata
-      if (fromCache.navChange == null) {
-        fromCache.navChange = supplement.navChange
-      }
-      // NAV: always use the more recent one
-      if (supplement.date > fromCache.date) {
-        fromCache.nav = supplement.nav
-        fromCache.date = supplement.date
+    const needSupplement = !fromCache.navIsValid || fromCache.navChange == null
+    if (needSupplement) {
+      const supplement = await trySupplementFromPingzhong(fundCode)
+      if (supplement) {
+        // navChange: prefer API value if available, else compute from pingzhongdata
+        if (fromCache.navChange == null) {
+          fromCache.navChange = supplement.navChange
+        }
+        // NAV: use pingzhongdata if FundGuZhi had no valid NAV, or if it's newer
+        if (!fromCache.navIsValid || supplement.date > fromCache.date) {
+          fromCache.nav = supplement.nav
+          fromCache.date = supplement.date
+        }
       }
     }
   }
@@ -621,6 +628,7 @@ function buildMockCache(): Map<string, FundGZEntry> {
       change: data.change,
       navChange: data.navChange,
       time: data.time || data.date,
+      navIsValid: true,
     })
   }
   return cache
