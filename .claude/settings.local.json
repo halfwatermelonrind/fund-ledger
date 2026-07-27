@@ -150,7 +150,9 @@
       "Bash(nslookup halfwatermelonrind.github.io)",
       "Bash(grep *)",
       "Bash(gh run *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Bash(VITE_FUNDGZ_PROXY=\"https://nameless-recipe-267b.mrwuhaha.workers.dev\" npx vite build)",
+      "Bash(cp -r dist/* docs/v3/)"
     ]
   }
 }
