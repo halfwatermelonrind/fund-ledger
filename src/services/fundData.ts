@@ -328,12 +328,32 @@ async function tryLoadJSONP(): Promise<boolean> {
 // 缓存未命中时降级到东方财富 pingzhongdata。
 // ============================================================
 
+interface ProxyFundItem {
+  c: string; n: string; v: number | null; d: string; vz: number | null
+}
+
 export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   if (!isBrowser) {
     return mockLatestNav(fundCode)
   }
 
-  // ---- Step 1: 尝试从 FundGuZhi 缓存获取 ----
+  // ---- Step 1: 代理（CF Worker / 腾讯云）— pingzhongdata 实时数据，无 Referer 限制 ----
+  const proxyUrl = import.meta.env.VITE_FUNDGZ_PROXY
+  if (proxyUrl) {
+    try {
+      const sep = proxyUrl.includes('?') ? '&' : '?'
+      const resp = await fetch(`${proxyUrl}${sep}codes=${fundCode}&_=${Date.now()}`, { cache: 'no-store' })
+      if (resp.ok) {
+        const list: ProxyFundItem[] = await resp.json()
+        const f = list.find((x) => x.c === fundCode)
+        if (f && f.v != null) {
+          return { name: f.n, nav: f.v, date: f.d, navChange: f.vz ?? undefined }
+        }
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  // ---- Step 2: 尝试从 FundGuZhi 缓存获取 ----
   let fromCache: FundNavData | null = null
   try {
     await loadFundGZCache()
@@ -354,9 +374,7 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     console.warn(`[fundData] FundGuZhi cache unavailable`)
   }
 
-  // ---- Step 2: 从 pingzhongdata 补充最新净值和涨跌幅 ----
-  // FundGuZhi 快照可能滞后（尤其15:00后今日净值出炉），pingzhongdata 经常有更新数据。
-  // 仅在快照数据超过 30 分钟或 NAV 无效时才补调，避免每次查询都额外请求。
+  // ---- Step 3: 从 pingzhongdata 补充最新净值和涨跌幅 ----
   if (fromCache) {
     const cacheAge = Date.now() - cacheLoadTime
     const needSupplement = !fromCache.navIsValid || fromCache.navChange == null || cacheAge > 30 * 60 * 1000
