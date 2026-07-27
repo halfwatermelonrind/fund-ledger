@@ -195,17 +195,27 @@ async function loadFundGZCache(force = false): Promise<void> {
     }
 
     // Try sources in order:
-    //  1. Static JSON snapshot (GitHub Actions, same-origin — no Referer issue)
-    //  2. Vite dev proxy → direct API (works in local dev)
-    //  3. Falls back to pingzhongdata (confirmed NAV only)
+    //  1. CF Worker proxy (if VITE_FUNDGZ_PROXY set — always fresh, no Referer issue)
+    //  2. Static JSON snapshot (GitHub Actions, same-origin)
+    //  3. Vite dev proxy → direct API (works in local dev)
+    //  4. Falls back to pingzhongdata (confirmed NAV only)
     let loaded = false
 
-    // ---- Source 1: static snapshot from GitHub Actions ----
-    try {
-      loaded = await tryLoadStaticJSON()
-    } catch (_) { /* fall through */ }
+    // ---- Source 1: CF Worker proxy ----
+    if (!loaded && import.meta.env.VITE_FUNDGZ_PROXY) {
+      try {
+        loaded = await tryLoadFromWorker(import.meta.env.VITE_FUNDGZ_PROXY)
+      } catch (_) { /* fall through */ }
+    }
 
-    // ---- Source 2: JSONP direct API (dev proxy or direct) ----
+    // ---- Source 2: static snapshot from GitHub Actions ----
+    if (!loaded) {
+      try {
+        loaded = await tryLoadStaticJSON()
+      } catch (_) { /* fall through */ }
+    }
+
+    // ---- Source 3: JSONP direct API (dev proxy or direct) ----
     if (!loaded) {
       try {
         loaded = await tryLoadJSONP()
@@ -238,6 +248,18 @@ interface GZSnapshot {
   }[]
 }
 
+async function tryLoadFromWorker(proxyUrl: string): Promise<boolean> {
+  const url = `${proxyUrl}?_=${Date.now()}`
+  console.log(`[fundData] trying CF Worker proxy: ${proxyUrl}`)
+  const t0 = Date.now()
+
+  const resp = await fetch(url, { cache: 'no-store' })
+  if (!resp.ok) throw new Error(`Worker HTTP ${resp.status}`)
+
+  const raw: GZSnapshot = await resp.json()
+  return buildCacheFromSnapshot(raw, t0)
+}
+
 async function tryLoadStaticJSON(): Promise<boolean> {
   const snapshotUrl = import.meta.env.BASE_URL + 'data/fundgz.json?_=' + Date.now()
   console.log(`[fundData] trying static snapshot: ${snapshotUrl}`)
@@ -251,32 +273,7 @@ async function tryLoadStaticJSON(): Promise<boolean> {
   const loadTime = fileTime ? new Date(fileTime).getTime() : Date.now()
 
   const raw: GZSnapshot = await resp.json()
-  if (!raw.funds || raw.funds.length === 0) throw new Error('empty snapshot')
-
-  const cache = new Map<string, FundGZEntry>()
-  for (const f of raw.funds) {
-    if (!f.c || !f.n) continue
-    cache.set(f.c, {
-      name: f.n,
-      nav: parseNum(f.v) ?? 0,
-      date: f.d || raw.gzrq || '',
-      estimate: parseNum(f.e),
-      change: parseNum(f.ez),
-      navChange: parseNum(f.vz),
-      time: f.t || raw.gxrq || '',
-      // Track whether the confirmed NAV was actually present
-      navIsValid: parseNum(f.v) != null,
-    })
-  }
-
-  fundGZCache = cache
-  cacheLoadTime = loadTime
-  snapshotMeta = { gzrq: raw.gzrq, gxrq: raw.gxrq, loadTime }
-  fundGZLoading = null
-  const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
-  const sizeKB = Math.round(JSON.stringify(raw).length / 1024)
-  console.log(`[fundData] static snapshot loaded: ${cache.size} funds, ${sizeKB} KB in ${elapsed}s`)
-  return true
+  return buildCacheFromSnapshot(raw, t0, loadTime)
 }
 
 async function tryLoadJSONP(): Promise<boolean> {
