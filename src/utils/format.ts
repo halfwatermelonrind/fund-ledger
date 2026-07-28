@@ -102,8 +102,9 @@ export function navChangeLabel(change: number | undefined, dateStr?: string): st
 }
 
 /** NAV label: "1.5060 ²⁸" */
-export function navDateLabel(nav: number | undefined, dateStr?: string): string {
-  if (nav == null || isNaN(nav) || nav <= 0) return '—'
+export function navDateLabel(n: number | undefined, dateStr?: string): string {
+  if (n == null || isNaN(n) || n <= 0) return '—'
   const sup = dateStr ? daySuperscript(dateStr) : ''
-  return sup ? `${nav(nav)} ${sup}` : nav(nav)
+  const v = nav(n)
+  return sup ? `${v} ${sup}` : v
 }

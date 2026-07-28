@@ -180,6 +180,8 @@ export async function fetchSinaEstimate(code: string): Promise<ValuationResult |
       estimate,
       change: d.worth_rate != null ? d.worth_rate * 100 : undefined,
       source: 'sina',
+      // Layer 2 doesn't return a timestamp; use today as valuation date
+      time: new Date().toISOString().slice(0, 10),
     }
   } catch {
     return null
