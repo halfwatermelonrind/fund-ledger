@@ -78,33 +78,32 @@ export function estimateTimeDisplay(time?: string): string {
 const SUPER_DIGITS = ['⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹']
 
 function daySuperscript(dateStr: string): string {
-  // Extract day from "YYYY-MM-DD" or "YYYY-MM-DD HH:mm"
-  const m = dateStr.match(/-(\d{2})/)
-  if (!m) return ''
-  const day = parseInt(m[1], 10)
-  const s = String(day).split('').map((ch) => SUPER_DIGITS[parseInt(ch, 10)]).join('')
-  return s
+  // Extract day from "YYYY-MM-DD" or "YYYY-MM-DD HH:mm" (last dash-separated 2-digit group)
+  const parts = dateStr.split(' ')[0].split('-')
+  const day = parseInt(parts[2], 10)  // parts = [YYYY, MM, DD]
+  if (isNaN(day)) return ''
+  return String(day).split('').map((ch) => SUPER_DIGITS[parseInt(ch, 10)]).join('')
 }
 
 /** Estimate change label: "+1.23% ²⁸预" */
 export function estimateLabel(change: number | undefined, dateStr?: string): string {
-  if (change == null) return '--'
+  if (change == null || isNaN(change)) return '--'
   const pct = percent(change)
   const sup = dateStr ? daySuperscript(dateStr) : ''
-  return `${pct}% ${sup}预`
+  return sup ? `${pct}% ${sup}预` : `${pct}% 预`
 }
 
 /** NAV change label: "+0.86% ²⁵确" */
 export function navChangeLabel(change: number | undefined, dateStr?: string): string {
-  if (change == null) return '--'
+  if (change == null || isNaN(change)) return '--'
   const pct = percent(change)
   const sup = dateStr ? daySuperscript(dateStr) : ''
-  return `${pct}% ${sup}确`
+  return sup ? `${pct}% ${sup}确` : `${pct}% 确`
 }
 
 /** NAV label: "1.5060 ²⁸" */
 export function navDateLabel(nav: number | undefined, dateStr?: string): string {
-  if (nav == null || nav <= 0) return '—'
+  if (nav == null || isNaN(nav) || nav <= 0) return '—'
   const sup = dateStr ? daySuperscript(dateStr) : ''
   return sup ? `${nav(nav)} ${sup}` : nav(nav)
 }
