@@ -373,7 +373,7 @@ export const useFundStore = create<FundStore>()(
           }).catch((e) => console.warn('[store] L2 background supplement failed:', e))
         } catch (e) {
           console.error('[store] refreshLatestNav failed:', e)
-          set({ isLoading: false })
+          // Keep isLoading true so user knows something is wrong
         }
       },
 
