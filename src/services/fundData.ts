@@ -16,7 +16,7 @@
  */
 
 import type { FundNavData, HistoryNavPoint, FundSearchItem } from '../types'
-import { fetchFundEstimate, fetchValuationBatch } from './valuationEngine'
+import { fetchValuationBatch, fetchSinaEstimate } from './valuationEngine'
 
 // ============================================================
 // Environment detection
@@ -397,14 +397,17 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     }
   }
 
-  // ---- Step 4: 补充盘中实时估值（三层 fallback）----
+  // ---- Step 4: 补充盘中实时估值（仅 L1 缓存，已在 preFetchValuations 中批量加载）----
   if (fromCache) {
     try {
-      const valuation = await fetchFundEstimate(fundCode)
-      if (valuation.estimate != null) {
-        fromCache.estimate = valuation.estimate
-        fromCache.change = valuation.change
-        fromCache.time = valuation.time || fromCache.time
+      // Only use L1 cache (already batch-loaded by preFetchValuations).
+      // L2 (Sina JSONP) is too slow to call per-fund here.
+      const l1Results = await fetchValuationBatch([fundCode])
+      const l1 = l1Results.get(fundCode)
+      if (l1 && l1.estimate != null) {
+        fromCache.estimate = l1.estimate
+        fromCache.change = l1.change
+        fromCache.time = l1.time || fromCache.time
       }
     } catch (_) { /* keep existing data */ }
     return fromCache
@@ -432,6 +435,30 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
 export async function preFetchValuations(codes: string[]): Promise<void> {
   if (!isBrowser || codes.length === 0) return
   await fetchValuationBatch(codes)
+}
+
+/**
+ * Background L2 supplement: for funds without L1 estimate, try Sina JSONP.
+ * Returns a map of code → {estimate, change, time} for funds that got L2 data.
+ */
+export async function supplementL2Estimates(codes: string[]): Promise<Map<string, { estimate: number; change?: number; time: string }>> {
+  const results = new Map<string, { estimate: number; change?: number; time: string }>()
+  if (!isBrowser || codes.length === 0) return results
+
+  // Process serially to avoid JSONP callback conflicts (though each has unique callback name, serial is safer)
+  for (const code of codes) {
+    try {
+      const r = await fetchSinaEstimate(code)
+      if (r && r.estimate != null) {
+        results.set(code, {
+          estimate: r.estimate,
+          change: r.change,
+          time: r.time || new Date().toISOString().slice(0, 10),
+        })
+      }
+    } catch (_) { /* skip */ }
+  }
+  return results
 }
 
 /** Fetch the last 2 NAV points from pingzhongdata to compute navChange */

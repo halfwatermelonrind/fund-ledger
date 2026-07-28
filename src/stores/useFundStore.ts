@@ -19,7 +19,7 @@ import { persist } from 'zustand/middleware'
 import type { Transaction, Position } from '../types'
 import { aggregatePositions } from '../utils/calculator'
 import type { NavEntry } from '../utils/calculator'
-import { fetchLatestNav, fetchHistoryNav, preFetchValuations } from '../services/fundData'
+import { fetchLatestNav, fetchHistoryNav, preFetchValuations, supplementL2Estimates } from '../services/fundData'
 
 // ============================================================
 // Type helpers
@@ -346,6 +346,28 @@ export const useFundStore = create<FundStore>()(
               positions: derivePositions(state.transactions, newCache),
               isLoading: false,
             }
+          })
+
+          // Background L2 (Sina) for funds without L1 estimate
+          supplementL2Estimates(codes).then((l2Results) => {
+            if (l2Results.size === 0) return
+            set((state) => {
+              const newCache = { ...state.navCache }
+              for (const [code, val] of l2Results) {
+                if (newCache[code] && newCache[code].estimate == null) {
+                  newCache[code] = {
+                    ...newCache[code],
+                    estimate: val.estimate,
+                    change: val.change ?? newCache[code].change,
+                    time: val.time,
+                  }
+                }
+              }
+              return {
+                navCache: newCache,
+                positions: derivePositions(state.transactions, newCache),
+              }
+            })
           })
         } catch {
           set({ isLoading: false })
