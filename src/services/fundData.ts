@@ -277,6 +277,33 @@ async function tryLoadStaticJSON(): Promise<boolean> {
   return buildCacheFromSnapshot(raw, t0, loadTime)
 }
 
+function buildCacheFromSnapshot(raw: GZSnapshot, t0: number, loadTime?: number): boolean {
+  if (!raw.funds || raw.funds.length === 0) throw new Error('empty snapshot')
+
+  const cache = new Map<string, FundGZEntry>()
+  for (const f of raw.funds) {
+    if (!f.c || !f.n) continue
+    cache.set(f.c, {
+      name: f.n,
+      nav: parseNum(f.v) ?? 0,
+      date: f.d || raw.gzrq || '',
+      // Do NOT use snapshot estimates — they're stale from old GetFundGZList
+      estimate: undefined,
+      change: undefined,
+      navChange: parseNum(f.vz),
+      time: f.t || raw.gxrq || '',
+      navIsValid: parseNum(f.v) != null,
+    })
+  }
+
+  fundGZCache = cache
+  cacheLoadTime = loadTime ?? Date.now()
+  snapshotMeta = { gzrq: raw.gzrq, gxrq: raw.gxrq, loadTime: cacheLoadTime }
+  fundGZLoading = null
+  console.log(`[fundData] snapshot cached: ${cache.size} funds`)
+  return true
+}
+
 async function tryLoadJSONP(): Promise<boolean> {
   const baseUrl = import.meta.env.VITE_FUNDGZ_PROXY
     || (import.meta.env.DEV ? '/api/fundgz' : 'https://api.fund.eastmoney.com')
@@ -398,12 +425,7 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   }
 
   // ---- Step 4: 补充盘中实时估值 ----
-  // Stale snapshot estimates (from old GetFundGZList) must be cleared first,
-  // otherwise L2 skip logic thinks the fund already has valid estimate data.
   if (fromCache) {
-    fromCache.estimate = undefined
-    fromCache.change = undefined
-
     try {
       const resp = await fetch(
         `https://fundcomapi.tiantianfunds.com/mm/newCore/FundValuationLast?FCODES=${fundCode}&FIELDS=FCODE,GSZ,GSZZL,GZTIME`,
