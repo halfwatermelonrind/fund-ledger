@@ -43,9 +43,24 @@ interface L1Response {
 // Simple in-memory cache (TTL: 30 seconds during trading, 5 min otherwise)
 const l1Cache = new Map<string, { data: ValuationResult; ts: number }>()
 
+/** Last batch result, keyed by code. Populated by preFetchValuations, read by fetchLatestNav. */
+let lastBatchResult: Map<string, ValuationResult> | null = null
+
+/** Populate lastBatchResult with fresh L1 data for the given codes */
+export async function preFetchAndStore(codes: string[]): Promise<void> {
+  l1Cache.clear()
+  lastBatchResult = await fetchValuationBatch(codes)
+}
+
+/** Read pre-fetched L1 estimate for a single code */
+export function getPreFetchedEstimate(code: string): ValuationResult | null {
+  return lastBatchResult?.get(code) ?? null
+}
+
 /** Clear all cached valuations — call before force refresh */
 export function clearValuationCache(): void {
   l1Cache.clear()
+  lastBatchResult = null
 }
 const L1_TTL_ACTIVE = 30_000
 const L1_TTL_IDLE = 300_000

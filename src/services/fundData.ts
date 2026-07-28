@@ -16,7 +16,7 @@
  */
 
 import type { FundNavData, HistoryNavPoint, FundSearchItem } from '../types'
-import { fetchSinaEstimate, fetchValuationBatch } from './valuationEngine'
+import { fetchSinaEstimate, preFetchAndStore, getPreFetchedEstimate } from './valuationEngine'
 
 // ============================================================
 // Environment detection
@@ -424,23 +424,15 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     }
   }
 
-  // ---- Step 4: 补充盘中实时估值 ----
+  // ---- Step 4: 补充盘中实时估值（从 preFetchAndStore 预取结果读取）----
   if (fromCache) {
-    try {
-      const resp = await fetch(
-        `https://fundcomapi.tiantianfunds.com/mm/newCore/FundValuationLast?FCODES=${fundCode}&FIELDS=FCODE,GSZ,GSZZL,GZTIME`,
-        { cache: 'no-store', signal: AbortSignal.timeout(8_000) }
-      )
-      if (resp.ok) {
-        const json = await resp.json()
-        const item = json?.data?.[0]
-        if (item && item.GSZ != null && item.GSZZL != null) {
-          fromCache.estimate = item.GSZ
-          fromCache.change = item.GSZZL
-          fromCache.time = item.GZTIME || fromCache.time
-        }
-      }
-    } catch (_) { /* L1 failed — L2 will fill in background */ }
+    const l1 = getPreFetchedEstimate(fundCode)
+    if (l1 && l1.estimate != null) {
+      fromCache.estimate = l1.estimate
+      fromCache.change = l1.change
+      fromCache.time = l1.time || fromCache.time
+    }
+    // If L1 had no data, estimate stays undefined → L2 will fill in background
     return fromCache
   }
 
@@ -465,7 +457,7 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
 /** Batch pre-fetch valuations for multiple codes (for store refreshLatestNav) */
 export async function preFetchValuations(codes: string[]): Promise<void> {
   if (!isBrowser || codes.length === 0) return
-  await fetchValuationBatch(codes)
+  await preFetchAndStore(codes)
 }
 
 /**
