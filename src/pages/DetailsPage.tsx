@@ -111,16 +111,13 @@ export default function DetailsPage() {
   const [expandedDetail, setExpandedDetail] = useState<string | null>(null)
   const [expandedPnl, setExpandedPnl] = useState<string | null>(null)
   const [clearedOpen, setClearedOpen] = useState(false)
+  const isLoading = useFundStore((s) => s.isLoading)
   const [updateTime, setUpdateTime] = useState('')
 
   async function handleRefresh() {
-    try {
-      clearValuationCache()
-      await refreshLatestNav()
-      setUpdateTime(formatNow())
-    } catch (e) {
-      console.error('[DetailsPage] refresh failed:', e)
-    }
+    clearValuationCache()
+    await refreshLatestNav()
+    setUpdateTime(formatNow())
   }
 
   // Auto-refresh valuations on mount
@@ -188,7 +185,7 @@ export default function DetailsPage() {
           <h2 className="text-base font-semibold tracking-wider text-fg">持仓明细</h2>
           <span className="text-[11px] text-muted">{updateTime}</span>
         </div>
-        <Button size="sm" onClick={handleRefresh}>刷新估值</Button>
+        <Button size="sm" onClick={handleRefresh} disabled={isLoading}>{isLoading ? '刷新中…' : '刷新估值'}</Button>
       </div>
 
       {/* Mobile sort bar */}
