@@ -7,7 +7,7 @@ import Button from '../components/Button'
 import RefreshButton from '../components/RefreshButton'
 import DataTable from '../components/DataTable'
 import { useIsPC } from '../hooks/useMediaQuery'
-import { money, moneySigned, shares, nav as fmtNav, percent, pnlColor } from '../utils/format'
+import { money, moneySigned, shares, nav as fmtNav, percent, pnlColor, estimateLabel, navChangeLabel, navDateLabel } from '../utils/format'
 import type { NavEntry } from '../utils/calculator'
 import type { Column } from '../components/DataTable'
 
@@ -164,12 +164,13 @@ export default function DetailsPage() {
     { key: 'name', title: '名称', render: (p) => <span className="max-w-[120px] overflow-hidden text-ellipsis whitespace-nowrap block">{p.fundName}</span> },
     { key: 'marketValue', title: '持仓市值', sortable: true, mono: true, render: (p) => money(p.marketValue) },
     { key: 'totalProfitRate', title: '盈亏比例', sortable: true, render: (p) => <span className={`font-mono tabular-nums ${pnlColor(p.totalProfitRate)}`}>{percent(p.totalProfitRate)}%</span> },
-    { key: 'change', title: '当日涨跌', sortable: true, render: (p) => p.estimateChange != null ? <span className={`font-mono tabular-nums ${pnlColor(p.estimateChange)}`}>{percent(p.estimateChange)}%</span> : <span className="text-muted">--</span> },
+    { key: 'change', title: '预估涨跌', sortable: true, render: (p) => <span className={`font-mono tabular-nums ${pnlColor(p.estimateChange ?? 0)}`}>{estimateLabel(p.estimateChange, p.estimateTime)}</span> },
     { key: 'totalShares', title: '持仓份额', sortable: true, mono: true, render: (p) => shares(p.totalShares) },
     { key: 'totalCost', title: '持仓成本', sortable: true, mono: true, render: (p) => money(p.totalCost) },
     { key: 'avgCostNav', title: '成本单价', mono: true, render: (p) => fmtNav(p.avgCostNav) },
-    { key: 'latestNav', title: '最新净值', mono: true, render: (p) => p.latestNav > 0 ? fmtNav(p.latestNav) : <span className="text-muted">—</span> },
-    { key: 'estimateNav', title: '实时估值', mono: true, render: (p) => p.estimateNav != null ? fmtNav(p.estimateNav) : <span className="text-muted">--</span> },
+    { key: 'navChange', title: '确认涨跌', sortable: true, render: (p) => <span className={`font-mono tabular-nums ${pnlColor(p.navChange ?? 0)}`}>{navChangeLabel(p.navChange, p.latestNavDate)}</span> },
+    { key: 'latestNav', title: '最新净值', mono: true, render: (p) => navDateLabel(p.latestNav, p.latestNavDate) },
+    { key: 'estimateNav', title: '实时估值', mono: true, render: (p) => navDateLabel(p.estimateNav, p.estimateTime) },
     { key: 'unrealizedProfit', title: '浮动盈亏', sortable: true, render: (p) => <span className={`font-mono tabular-nums ${pnlColor(p.unrealizedProfit)}`}>{moneySigned(p.unrealizedProfit)}</span> },
     { key: 'realizedProfit', title: '已实现盈亏', sortable: true, render: (p) => <span className={`font-mono tabular-nums ${pnlColor(p.realizedProfit)}`}>{moneySigned(p.realizedProfit)}</span> },
     { key: 'dividendProfit', title: '累计分红', mono: true, render: (p) => money(p.dividendProfit) },
@@ -220,11 +221,9 @@ export default function DetailsPage() {
                       <span className={`text-lg font-bold font-mono shrink-0 ${pnlColor(p.totalProfitRate)}`}>{percent(p.totalProfitRate)}%</span>
                       <span className="text-[10px] text-muted shrink-0 ml-0.5">盈亏</span>
                       <span className="text-border shrink-0 mx-0.5">|</span>
-                      <span className={`text-xs font-mono shrink-0 ${pnlColor(p.estimateChange ?? 0)}`}>{p.estimateChange != null ? `${percent(p.estimateChange)}%` : '--'}</span>
-                      <span className="text-[10px] text-muted shrink-0">预</span>
+                      <span className={`text-xs font-mono shrink-0 ${pnlColor(p.estimateChange ?? 0)}`}>{estimateLabel(p.estimateChange, p.estimateTime)}</span>
                       <span className="text-border shrink-0 mx-0.5">|</span>
-                      <span className={`text-xs font-mono shrink-0 ${pnlColor(p.navChange ?? 0)}`}>{p.navChange != null ? `${percent(p.navChange)}%` : '--'}</span>
-                      <span className="text-[10px] text-muted shrink-0">确</span>
+                      <span className={`text-xs font-mono shrink-0 ${pnlColor(p.navChange ?? 0)}`}>{navChangeLabel(p.navChange, p.latestNavDate)}</span>
                     </div>
                   </div>
                   <div className="text-right shrink-0">
@@ -250,8 +249,8 @@ export default function DetailsPage() {
                       <dt className="text-muted">持仓份额</dt><dd className="font-mono">{shares(p.totalShares)}</dd>
                       <dt className="text-muted">持仓成本</dt><dd className="font-mono">{money(p.totalCost)}</dd>
                       <dt className="text-muted">成本单价</dt><dd className="font-mono">{fmtNav(p.avgCostNav)}</dd>
-                      <dt className="text-muted">最新净值</dt><dd className="font-mono">{p.latestNav > 0 ? fmtNav(p.latestNav) : '—'}</dd>
-                      <dt className="text-muted">实时估值</dt><dd className="font-mono">{p.estimateNav != null ? fmtNav(p.estimateNav) : '--'}</dd>
+                      <dt className="text-muted">最新净值</dt><dd className="font-mono">{navDateLabel(p.latestNav, p.latestNavDate)}</dd>
+                      <dt className="text-muted">实时估值</dt><dd className="font-mono">{navDateLabel(p.estimateNav, p.estimateTime)}</dd>
                       <dt className="text-muted">浮动盈亏</dt><dd className={`font-mono ${pnlColor(p.unrealizedProfit)}`}>{moneySigned(p.unrealizedProfit)}</dd>
                       <dt className="text-muted">已实现盈亏</dt><dd className={`font-mono ${pnlColor(p.realizedProfit)}`}>{moneySigned(p.realizedProfit)}</dd>
                       <dt className="text-muted">累计分红</dt><dd className="font-mono">{money(p.dividendProfit)}</dd>
