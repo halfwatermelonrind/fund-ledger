@@ -16,7 +16,7 @@
  */
 
 import type { FundNavData, HistoryNavPoint, FundSearchItem } from '../types'
-import { fetchValuationBatch, fetchSinaEstimate } from './valuationEngine'
+import { fetchSinaEstimate, fetchValuationBatch } from './valuationEngine'
 
 // ============================================================
 // Environment detection
@@ -397,17 +397,22 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     }
   }
 
-  // ---- Step 4: 补充盘中实时估值（仅 L1 缓存，已在 preFetchValuations 中批量加载）----
+  // ---- Step 4: 补充盘中实时估值（优先 L1，失败不降级）----
   if (fromCache) {
+    // Always fetch fresh L1 for this specific code (bypass cache to avoid stale nulls)
     try {
-      // Only use L1 cache (already batch-loaded by preFetchValuations).
-      // L2 (Sina JSONP) is too slow to call per-fund here.
-      const l1Results = await fetchValuationBatch([fundCode])
-      const l1 = l1Results.get(fundCode)
-      if (l1 && l1.estimate != null) {
-        fromCache.estimate = l1.estimate
-        fromCache.change = l1.change
-        fromCache.time = l1.time || fromCache.time
+      const resp = await fetch(
+        `https://fundcomapi.tiantianfunds.com/mm/newCore/FundValuationLast?FCODES=${fundCode}&FIELDS=FCODE,GSZ,GSZZL,GZTIME`,
+        { cache: 'no-store', signal: AbortSignal.timeout(8_000) }
+      )
+      if (resp.ok) {
+        const json = await resp.json()
+        const item = json?.data?.[0]
+        if (item && item.GSZ != null && item.GSZZL != null) {
+          fromCache.estimate = item.GSZ
+          fromCache.change = item.GSZZL
+          fromCache.time = item.GZTIME || fromCache.time
+        }
       }
     } catch (_) { /* keep existing data */ }
     return fromCache
