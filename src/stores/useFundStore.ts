@@ -19,7 +19,7 @@ import { persist } from 'zustand/middleware'
 import type { Transaction, Position } from '../types'
 import { aggregatePositions } from '../utils/calculator'
 import type { NavEntry } from '../utils/calculator'
-import { fetchLatestNav, fetchHistoryNav } from '../services/fundData'
+import { fetchLatestNav, fetchHistoryNav, preFetchValuations } from '../services/fundData'
 
 // ============================================================
 // Type helpers
@@ -327,6 +327,9 @@ export const useFundStore = create<FundStore>()(
         set({ isLoading: true })
 
         try {
+          // Pre-fetch valuations in batch (Layer 1: up to 50 per request)
+          await preFetchValuations(codes)
+
           const results = await batchRun(codes, fetchLatestNav, 5)
 
           set((state) => {

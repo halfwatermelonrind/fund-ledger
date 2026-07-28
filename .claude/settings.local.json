@@ -154,7 +154,8 @@
       "Bash(VITE_FUNDGZ_PROXY=\"https://nameless-recipe-267b.mrwuhaha.workers.dev\" npx vite build)",
       "Bash(cp -r dist/* docs/v3/)",
       "WebFetch(domain:nameless-recipe-267b.mrwuhaha.workers.dev)",
-      "Bash(VITE_FUNDGZ_PROXY=/api/fund npx vite build)"
+      "Bash(VITE_FUNDGZ_PROXY=/api/fund npx vite build)",
+      "Bash(iconv -f gbk -t utf-8)"
     ]
   }
 }

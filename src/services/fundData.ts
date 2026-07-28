@@ -16,6 +16,7 @@
  */
 
 import type { FundNavData, HistoryNavPoint, FundSearchItem } from '../types'
+import { fetchFundEstimate, fetchValuationBatch } from './valuationEngine'
 
 // ============================================================
 // Environment detection
@@ -347,6 +348,10 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
         const list: ProxyFundItem[] = await resp.json()
         const f = list.find((x) => x.c === fundCode)
         if (f && f.v != null) {
+          // Track proxy as data source so update time display works
+          if (!snapshotMeta) {
+            snapshotMeta = { gzrq: f.d, gxrq: f.d, loadTime: Date.now() }
+          }
           return { name: f.n, nav: f.v, date: f.d, navChange: f.vz ?? undefined }
         }
       }
@@ -392,18 +397,41 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     }
   }
 
-  if (fromCache) return fromCache
+  // ---- Step 4: 补充盘中实时估值（三层 fallback）----
+  if (fromCache) {
+    try {
+      const valuation = await fetchFundEstimate(fundCode)
+      if (valuation.estimate != null) {
+        fromCache.estimate = valuation.estimate
+        fromCache.change = valuation.change
+        fromCache.time = valuation.time || fromCache.time
+      }
+    } catch (_) { /* keep existing data */ }
+    return fromCache
+  }
 
-  // ---- Step 3: 缓存完全未命中，降级到 pingzhongdata ----
-  try {
-    const fallback = await tryPingzhongFull(fundCode)
-    if (fallback) return fallback
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : '未知错误'
-    throw new Error(`无法获取基金 ${fundCode} 的数据：${msg}`)
+  // ---- Step 5: 缓存完全未命中，降级到 pingzhongdata ----
+  const fallback = await tryPingzhongFull(fundCode)
+  if (fallback) {
+    // Also try valuation
+    try {
+      const valuation = await fetchFundEstimate(fundCode)
+      if (valuation.estimate != null) {
+        fallback.estimate = valuation.estimate
+        fallback.change = valuation.change
+        fallback.time = valuation.time
+      }
+    } catch (_) { /* */ }
+    return fallback
   }
 
   throw new Error(`无法获取基金 ${fundCode} 的数据`)
+}
+
+/** Batch pre-fetch valuations for multiple codes (for store refreshLatestNav) */
+export async function preFetchValuations(codes: string[]): Promise<void> {
+  if (!isBrowser || codes.length === 0) return
+  await fetchValuationBatch(codes)
 }
 
 /** Fetch the last 2 NAV points from pingzhongdata to compute navChange */
