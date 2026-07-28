@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import type { Transaction, Position } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { aggregatePositions } from '../utils/calculator'
-import { isTradingHours, getSnapshotMeta } from '../services/fundData'
+import { isTradingHours } from '../services/fundData'
 import { clearValuationCache } from '../services/valuationEngine'
 import Button from '../components/Button'
 import RefreshButton from '../components/RefreshButton'
@@ -111,22 +111,13 @@ export default function DetailsPage() {
   const [expandedDetail, setExpandedDetail] = useState<string | null>(null)
   const [expandedPnl, setExpandedPnl] = useState<string | null>(null)
   const [clearedOpen, setClearedOpen] = useState(false)
-  const [, setTick] = useState(0)
-
-  function getUpdateTimeStr(): string {
-    const m = getSnapshotMeta()
-    if (!m) return ''
-    const date = m.gxrq || m.gzrq
-    const t = new Date(m.loadTime)
-    const hm = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`
-    return `数据更新于 ${date} ${hm}`
-  }
+  const [updateTime, setUpdateTime] = useState('')
 
   async function handleRefresh() {
     try {
       clearValuationCache()
       await refreshLatestNav()
-      setTick((n) => n + 1)
+      setUpdateTime(formatNow())
     } catch (e) {
       console.error('[DetailsPage] refresh failed:', e)
     }
@@ -136,8 +127,15 @@ export default function DetailsPage() {
   useEffect(() => {
     const codes = [...new Set(txs.map((t) => t.fundCode))]
     if (codes.length === 0) return
-    refreshLatestNav(codes).then(() => setTick((n) => n + 1))
+    refreshLatestNav(codes).then(() => setUpdateTime(formatNow()))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function formatNow(): string {
+    const now = new Date()
+    const date = now.toISOString().slice(0, 10)
+    const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+    return `数据更新于 ${date} ${hm}`
+  }
 
   const sortedActive = useMemo(() => {
     const list = [...activePositions]
@@ -188,7 +186,7 @@ export default function DetailsPage() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-base font-semibold tracking-wider text-fg">持仓明细</h2>
-          <span className="text-[11px] text-muted">{getUpdateTimeStr()}</span>
+          <span className="text-[11px] text-muted">{updateTime}</span>
         </div>
         <Button size="sm" onClick={handleRefresh}>刷新估值</Button>
       </div>

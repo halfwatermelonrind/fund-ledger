@@ -62,7 +62,7 @@ export default function SignalPage() {
     if (!needRefresh) { setLoading(false); return }
     setLoading(false)
     setRefreshing(true)
-    refreshLatestNav(codes).finally(() => setRefreshing(false))
+    refreshLatestNav(codes).catch((e) => console.warn("\[SignalPage\] refresh failed:", e)).finally(() => setRefreshing(false))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const signals = useMemo(() => {
