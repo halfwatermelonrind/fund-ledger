@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from 'react'
 import type { Transaction, Position } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { aggregatePositions } from '../utils/calculator'
-import { isTradingHours, getSnapshotMeta, refreshEstimateCache } from '../services/fundData'
+import { isTradingHours, getSnapshotMeta } from '../services/fundData'
+import { clearValuationCache } from '../services/valuationEngine'
 import Button from '../components/Button'
 import RefreshButton from '../components/RefreshButton'
 import DataTable from '../components/DataTable'
@@ -123,7 +124,7 @@ export default function DetailsPage() {
 
   async function handleRefresh() {
     try {
-      await refreshEstimateCache()
+      clearValuationCache()
       await refreshLatestNav()
       setTick((n) => n + 1)
     } catch (e) {
@@ -135,9 +136,7 @@ export default function DetailsPage() {
   useEffect(() => {
     const codes = [...new Set(txs.map((t) => t.fundCode))]
     if (codes.length === 0) return
-    refreshEstimateCache().then(() => {
-      refreshLatestNav(codes).then(() => setTick((n) => n + 1))
-    })
+    refreshLatestNav(codes).then(() => setTick((n) => n + 1))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sortedActive = useMemo(() => {

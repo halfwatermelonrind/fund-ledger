@@ -42,6 +42,11 @@ interface L1Response {
 
 // Simple in-memory cache (TTL: 30 seconds during trading, 5 min otherwise)
 const l1Cache = new Map<string, { data: ValuationResult; ts: number }>()
+
+/** Clear all cached valuations — call before force refresh */
+export function clearValuationCache(): void {
+  l1Cache.clear()
+}
 const L1_TTL_ACTIVE = 30_000
 const L1_TTL_IDLE = 300_000
 
