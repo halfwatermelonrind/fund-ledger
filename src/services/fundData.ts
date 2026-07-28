@@ -397,9 +397,13 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     }
   }
 
-  // ---- Step 4: 补充盘中实时估值（优先 L1，失败不降级）----
+  // ---- Step 4: 补充盘中实时估值 ----
+  // Stale snapshot estimates (from old GetFundGZList) must be cleared first,
+  // otherwise L2 skip logic thinks the fund already has valid estimate data.
   if (fromCache) {
-    // Always fetch fresh L1 for this specific code (bypass cache to avoid stale nulls)
+    fromCache.estimate = undefined
+    fromCache.change = undefined
+
     try {
       const resp = await fetch(
         `https://fundcomapi.tiantianfunds.com/mm/newCore/FundValuationLast?FCODES=${fundCode}&FIELDS=FCODE,GSZ,GSZZL,GZTIME`,
@@ -414,7 +418,7 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
           fromCache.time = item.GZTIME || fromCache.time
         }
       }
-    } catch (_) { /* keep existing data */ }
+    } catch (_) { /* L1 failed — L2 will fill in background */ }
     return fromCache
   }
 
