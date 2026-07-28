@@ -337,6 +337,7 @@ export const useFundStore = create<FundStore>()(
             results.forEach((result, i) => {
               if (result.status === 'fulfilled') {
                 const { name: _, ...navEntry } = result.value
+                // Force-clear any stale L2 estimates; they'll be refreshed in background
                 newCache[codes[i]] = navEntry
               }
             })
@@ -348,17 +349,18 @@ export const useFundStore = create<FundStore>()(
             }
           })
 
-          // Background L2 (Sina) for funds without L1 estimate
+          // Background L2 (Sina) for ALL funds (not just those without L1)
+          // because L2 may have newer/different estimates than L1
           supplementL2Estimates(codes).then((l2Results) => {
             if (l2Results.size === 0) return
             set((state) => {
               const newCache = { ...state.navCache }
               for (const [code, val] of l2Results) {
-                if (newCache[code] && newCache[code].estimate == null) {
+                if (newCache[code]) {
                   newCache[code] = {
                     ...newCache[code],
                     estimate: val.estimate,
-                    change: val.change ?? newCache[code].change,
+                    change: val.change,
                     time: val.time,
                   }
                 }
@@ -368,8 +370,9 @@ export const useFundStore = create<FundStore>()(
                 positions: derivePositions(state.transactions, newCache),
               }
             })
-          })
-        } catch {
+          }).catch((e) => console.warn('[store] L2 background supplement failed:', e))
+        } catch (e) {
+          console.error('[store] refreshLatestNav failed:', e)
           set({ isLoading: false })
         }
       },
