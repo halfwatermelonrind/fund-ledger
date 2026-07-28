@@ -128,8 +128,22 @@ interface L2Response {
       worth?: string
       worth_rate?: number
       worth_date?: string
+      networth?: Array<{
+        min_time?: string
+        pre_nav?: string | number | null
+        nav_pct?: string | number | null
+        pre_nav2?: string | number | null
+        nav2_pct?: string | number | null
+        pre_date?: string
+      }>
     }
   }
+}
+
+function toNum(v: string | number | null | undefined): number | null {
+  if (v == null || v === '' || v === '---') return null
+  const n = typeof v === 'number' ? v : parseFloat(String(v))
+  return isNaN(n) ? null : n
 }
 
 function jsonpSina(url: string, timeout = 8000): Promise<L2Response> {
@@ -176,17 +190,20 @@ export async function fetchSinaEstimate(code: string): Promise<ValuationResult |
 
     if (raw?.result?.status?.code !== 0) return null
     const d = raw.result?.data
-    if (!d?.worth) return null
+    const curve = d?.networth
+    if (!curve || curve.length === 0) return null
 
-    const estimate = parseFloat(d.worth)
-    if (isNaN(estimate)) return null
+    // Take the LAST point of the intraday estimate curve
+    const last = curve[curve.length - 1]
+    const nav = toNum(last.pre_nav)
+    const pct = toNum(last.nav_pct)  // Already in percentage (e.g. 1.63 = +1.63%)
+    if (nav == null || pct == null) return null
 
     return {
-      estimate,
-      change: d.worth_rate != null ? d.worth_rate * 100 : undefined,
+      estimate: nav,
+      change: pct,
       source: 'sina',
-      // Layer 2 doesn't return a timestamp; use today as valuation date
-      time: new Date().toISOString().slice(0, 10),
+      time: last.pre_date || new Date().toISOString().slice(0, 10),
     }
   } catch {
     return null
