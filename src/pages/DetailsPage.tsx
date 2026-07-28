@@ -116,15 +116,23 @@ export default function DetailsPage() {
 
   async function handleRefresh() {
     clearValuationCache()
-    await refreshLatestNav()
-    setUpdateTime(formatNow())
+    setUpdateTime('更新中…')
+    try {
+      await refreshLatestNav()
+    } finally {
+      setUpdateTime(formatNow())
+    }
   }
 
   // Auto-refresh valuations on mount
   useEffect(() => {
     const codes = [...new Set(txs.map((t) => t.fundCode))]
     if (codes.length === 0) return
-    refreshLatestNav(codes).then(() => setUpdateTime(formatNow()))
+    setUpdateTime('更新中…')
+    refreshLatestNav(codes).then(
+      () => setUpdateTime(formatNow()),
+      () => setUpdateTime('更新失败 — ' + formatNow().replace('数据更新于 ', ''))
+    )
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function formatNow(): string {

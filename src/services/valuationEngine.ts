@@ -84,7 +84,7 @@ export async function fetchValuationBatch(codes: string[]): Promise<Map<string, 
     const batch = uncached.slice(i, i + L1_BATCH_SIZE)
     try {
       const url = `${L1_URL}?FCODES=${batch.join(',')}&FIELDS=${L1_FIELDS}`
-      const resp = await fetch(url, { cache: 'no-store' })
+      const resp = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(10_000) })
       if (!resp.ok) continue
 
       const json: L1Response = await resp.json()
