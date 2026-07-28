@@ -325,6 +325,9 @@ export const useFundStore = create<FundStore>()(
         if (codes.length === 0) return
 
         set({ isLoading: true })
+        const done = () => set({ isLoading: false })
+        // Safety timeout: force-complete after 15s whatever happens
+        const safetyTimer = setTimeout(done, 15_000)
 
         try {
           // Pre-fetch valuations in batch (Layer 1: up to 50 per request)
@@ -348,6 +351,7 @@ export const useFundStore = create<FundStore>()(
               isLoading: false,
             }
           })
+          clearTimeout(safetyTimer)
 
           // Background L2 (Sina) for ALL funds (not just those without L1)
           // because L2 may have newer/different estimates than L1
@@ -373,6 +377,7 @@ export const useFundStore = create<FundStore>()(
           }).catch((e) => console.warn('[store] L2 background supplement failed:', e))
         } catch (e) {
           console.error('[store] refreshLatestNav failed:', e)
+          clearTimeout(safetyTimer)
           // Keep isLoading true so user knows something is wrong
         }
       },
