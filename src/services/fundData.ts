@@ -266,7 +266,7 @@ async function tryLoadStaticJSON(): Promise<boolean> {
   console.log(`[fundData] trying static snapshot: ${snapshotUrl}`)
   const t0 = Date.now()
 
-  const resp = await fetch(snapshotUrl, { cache: 'no-store' })
+  const resp = await fetch(snapshotUrl, { cache: 'no-store', signal: AbortSignal.timeout(10_000) })
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
 
   // Use file's Last-Modified as the authoritative update time
