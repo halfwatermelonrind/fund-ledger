@@ -424,15 +424,32 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     }
   }
 
-  // ---- Step 4: 补充盘中实时估值（从 preFetchAndStore 预取结果读取）----
+  // ---- Step 4: 补充盘中实时估值 ----
+  // Try pre-fetched result first, fall back to direct L1 call, then L2 background
   if (fromCache) {
-    const l1 = getPreFetchedEstimate(fundCode)
-    if (l1 && l1.estimate != null) {
-      fromCache.estimate = l1.estimate
-      fromCache.change = l1.change
-      fromCache.time = l1.time || fromCache.time
+    const pre = getPreFetchedEstimate(fundCode)
+    if (pre && pre.estimate != null) {
+      fromCache.estimate = pre.estimate
+      fromCache.change = pre.change
+      fromCache.time = pre.time || fromCache.time
+    } else {
+      // Pre-fetch missed this code — try direct L1 call
+      try {
+        const resp = await fetch(
+          `https://fundcomapi.tiantianfunds.com/mm/newCore/FundValuationLast?FCODES=${fundCode}&FIELDS=FCODE,GSZ,GSZZL,GZTIME`,
+          { cache: 'no-store', signal: AbortSignal.timeout(8_000) }
+        )
+        if (resp.ok) {
+          const json = await resp.json()
+          const item = json?.data?.[0]
+          if (item && item.GSZ != null && item.GSZZL != null) {
+            fromCache.estimate = item.GSZ
+            fromCache.change = item.GSZZL
+            fromCache.time = item.GZTIME || fromCache.time
+          }
+        }
+      } catch (_) { /* L2 will fill in background */ }
     }
-    // If L1 had no data, estimate stays undefined → L2 will fill in background
     return fromCache
   }
 
