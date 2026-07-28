@@ -333,24 +333,29 @@ export const useFundStore = create<FundStore>()(
           // Pre-fetch valuations in batch (Layer 1: up to 50 per request)
           await preFetchValuations(codes)
 
-          const results = await batchRun(codes, fetchLatestNav, 5)
+          // Process incrementally — update store as each fund completes,
+          // so index funds with L1 data show estimates immediately
+          let completed = 0
+          for (let i = 0; i < codes.length; i += 5) {
+            const batch = codes.slice(i, i + 5)
+            const batchResults = await Promise.allSettled(batch.map((c) => fetchLatestNav(c)))
+            completed += batch.length
 
-          set((state) => {
-            const newCache = { ...state.navCache }
-            results.forEach((result, i) => {
-              if (result.status === 'fulfilled') {
-                const { name: _, ...navEntry } = result.value
-                // Force-clear any stale L2 estimates; they'll be refreshed in background
-                newCache[codes[i]] = navEntry
+            set((state) => {
+              const newCache = { ...state.navCache }
+              batchResults.forEach((result, j) => {
+                if (result.status === 'fulfilled') {
+                  const { name: _, ...navEntry } = result.value
+                  newCache[batch[j]] = navEntry
+                }
+              })
+              return {
+                navCache: newCache,
+                positions: derivePositions(state.transactions, newCache),
+                isLoading: completed < codes.length ? true : false,
               }
             })
-
-            return {
-              navCache: newCache,
-              positions: derivePositions(state.transactions, newCache),
-              isLoading: false,
-            }
-          })
+          }
           clearTimeout(safetyTimer)
 
           // Background L2 (Sina) for ALL funds (not just those without L1)
