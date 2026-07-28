@@ -16,6 +16,7 @@
  */
 
 import type { FundNavData, HistoryNavPoint, FundSearchItem } from '../types'
+import { fetchFundEstimate, fetchValuationBatch } from './valuationEngine'
 
 // ============================================================
 // Environment detection
@@ -328,12 +329,36 @@ async function tryLoadJSONP(): Promise<boolean> {
 // 缓存未命中时降级到东方财富 pingzhongdata。
 // ============================================================
 
+interface ProxyFundItem {
+  c: string; n: string; v: number | null; d: string; vz: number | null
+}
+
 export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   if (!isBrowser) {
     return mockLatestNav(fundCode)
   }
 
-  // ---- Step 1: 尝试从 FundGuZhi 缓存获取 ----
+  // ---- Step 1: 代理（CF Worker / 腾讯云）— pingzhongdata 实时数据，无 Referer 限制 ----
+  const proxyUrl = import.meta.env.VITE_FUNDGZ_PROXY
+  if (proxyUrl) {
+    try {
+      const sep = proxyUrl.includes('?') ? '&' : '?'
+      const resp = await fetch(`${proxyUrl}${sep}codes=${fundCode}&_=${Date.now()}`, { cache: 'no-store' })
+      if (resp.ok) {
+        const list: ProxyFundItem[] = await resp.json()
+        const f = list.find((x) => x.c === fundCode)
+        if (f && f.v != null) {
+          // Track proxy as data source so update time display works
+          if (!snapshotMeta) {
+            snapshotMeta = { gzrq: f.d, gxrq: f.d, loadTime: Date.now() }
+          }
+          return { name: f.n, nav: f.v, date: f.d, navChange: f.vz ?? undefined }
+        }
+      }
+    } catch (_) { /* fall through */ }
+  }
+
+  // ---- Step 2: 尝试从 FundGuZhi 缓存获取 ----
   let fromCache: FundNavData | null = null
   try {
     await loadFundGZCache()
@@ -354,9 +379,7 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     console.warn(`[fundData] FundGuZhi cache unavailable`)
   }
 
-  // ---- Step 2: 从 pingzhongdata 补充最新净值和涨跌幅 ----
-  // FundGuZhi 快照可能滞后（尤其15:00后今日净值出炉），pingzhongdata 经常有更新数据。
-  // 仅在快照数据超过 30 分钟或 NAV 无效时才补调，避免每次查询都额外请求。
+  // ---- Step 3: 从 pingzhongdata 补充最新净值和涨跌幅 ----
   if (fromCache) {
     const cacheAge = Date.now() - cacheLoadTime
     const needSupplement = !fromCache.navIsValid || fromCache.navChange == null || cacheAge > 30 * 60 * 1000
@@ -374,18 +397,41 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     }
   }
 
-  if (fromCache) return fromCache
+  // ---- Step 4: 补充盘中实时估值（三层 fallback）----
+  if (fromCache) {
+    try {
+      const valuation = await fetchFundEstimate(fundCode)
+      if (valuation.estimate != null) {
+        fromCache.estimate = valuation.estimate
+        fromCache.change = valuation.change
+        fromCache.time = valuation.time || fromCache.time
+      }
+    } catch (_) { /* keep existing data */ }
+    return fromCache
+  }
 
-  // ---- Step 3: 缓存完全未命中，降级到 pingzhongdata ----
-  try {
-    const fallback = await tryPingzhongFull(fundCode)
-    if (fallback) return fallback
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : '未知错误'
-    throw new Error(`无法获取基金 ${fundCode} 的数据：${msg}`)
+  // ---- Step 5: 缓存完全未命中，降级到 pingzhongdata ----
+  const fallback = await tryPingzhongFull(fundCode)
+  if (fallback) {
+    // Also try valuation
+    try {
+      const valuation = await fetchFundEstimate(fundCode)
+      if (valuation.estimate != null) {
+        fallback.estimate = valuation.estimate
+        fallback.change = valuation.change
+        fallback.time = valuation.time
+      }
+    } catch (_) { /* */ }
+    return fallback
   }
 
   throw new Error(`无法获取基金 ${fundCode} 的数据`)
+}
+
+/** Batch pre-fetch valuations for multiple codes (for store refreshLatestNav) */
+export async function preFetchValuations(codes: string[]): Promise<void> {
+  if (!isBrowser || codes.length === 0) return
+  await fetchValuationBatch(codes)
 }
 
 /** Fetch the last 2 NAV points from pingzhongdata to compute navChange */
