@@ -346,6 +346,14 @@ export const useFundStore = create<FundStore>()(
               batchResults.forEach((result, j) => {
                 if (result.status === 'fulfilled') {
                   const { name: _, ...navEntry } = result.value
+                  // Don't overwrite persisted estimates with undefined —
+                  // only replace if new data has an actual estimate value
+                  const old = state.navCache[batch[j]]
+                  if (navEntry.estimate == null && old?.estimate != null) {
+                    navEntry.estimate = old.estimate
+                    navEntry.change = old.change
+                    navEntry.time = old.time
+                  }
                   newCache[batch[j]] = navEntry
                 }
               })
