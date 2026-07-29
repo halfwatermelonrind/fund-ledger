@@ -425,7 +425,8 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   }
 
   // ---- Step 4: 补充盘中实时估值 ----
-  // Try pre-fetched result first, fall back to direct L1 call, then L2 background
+  // Only SET estimate if we have fresh data. Don't clear existing values —
+  // the persisted navCache may have a valid L2 estimate from a previous refresh.
   if (fromCache) {
     const pre = getPreFetchedEstimate(fundCode)
     if (pre && pre.estimate != null) {
@@ -433,7 +434,6 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
       fromCache.change = pre.change
       fromCache.time = pre.time || fromCache.time
     } else {
-      // Pre-fetch missed this code — try direct L1 call
       try {
         const resp = await fetch(
           `https://fundcomapi.tiantianfunds.com/mm/newCore/FundValuationLast?FCODES=${fundCode}&FIELDS=FCODE,GSZ,GSZZL,GZTIME`,
@@ -448,7 +448,7 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
             fromCache.time = item.GZTIME || fromCache.time
           }
         }
-      } catch (_) { /* L2 will fill in background */ }
+      } catch (_) { /* keep existing estimate if any */ }
     }
     return fromCache
   }
