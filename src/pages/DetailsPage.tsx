@@ -111,36 +111,41 @@ export default function DetailsPage() {
   const [expandedDetail, setExpandedDetail] = useState<string | null>(null)
   const [expandedPnl, setExpandedPnl] = useState<string | null>(null)
   const [clearedOpen, setClearedOpen] = useState(false)
-  const isLoading = useFundStore((s) => s.isLoading)
-  const [updateTime, setUpdateTime] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const [updateTime, setUpdateTime] = useState(() => {
+    // Show last known time from stored data if available
+    const cache = useFundStore.getState().navCache
+    const dates = Object.values(cache).map(e => e.date).filter(Boolean) as string[]
+    if (dates.length > 0) {
+      const latest = dates.sort().pop()!
+      return `缓存数据 · 净值日期 ${latest}`
+    }
+    return ''
+  })
 
-  async function handleRefresh() {
-    clearValuationCache()
-    setUpdateTime('更新中…')
+  const doRefresh = async (force: boolean) => {
+    if (refreshing) return
+    setRefreshing(true)
+    if (force) clearValuationCache()
     try {
       await refreshLatestNav()
+      const now = new Date()
+      const date = now.toISOString().slice(0, 10)
+      const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      setUpdateTime(`数据更新于 ${date} ${hm}`)
+    } catch (_) {
+      // keep existing updateTime
     } finally {
-      setUpdateTime(formatNow())
+      setRefreshing(false)
     }
   }
 
-  // Auto-refresh valuations on mount
+  // Background auto-refresh on mount (non-blocking)
   useEffect(() => {
     const codes = [...new Set(txs.map((t) => t.fundCode))]
     if (codes.length === 0) return
-    setUpdateTime('更新中…')
-    refreshLatestNav(codes).then(
-      () => setUpdateTime(formatNow()),
-      () => setUpdateTime('更新失败 — ' + formatNow().replace('数据更新于 ', ''))
-    )
+    doRefresh(false)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  function formatNow(): string {
-    const now = new Date()
-    const date = now.toISOString().slice(0, 10)
-    const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-    return `数据更新于 ${date} ${hm}`
-  }
 
   const sortedActive = useMemo(() => {
     const list = [...activePositions]
@@ -193,7 +198,7 @@ export default function DetailsPage() {
           <h2 className="text-base font-semibold tracking-wider text-fg">持仓明细</h2>
           <span className="text-[11px] text-muted">{updateTime}</span>
         </div>
-        <Button size="sm" onClick={handleRefresh} disabled={isLoading}>{isLoading ? '刷新中…' : '刷新估值'}</Button>
+        <Button size="sm" onClick={() => doRefresh(true)} disabled={refreshing}>{refreshing ? '刷新中…' : '刷新估值'}</Button>
       </div>
 
       {/* Mobile sort bar */}
