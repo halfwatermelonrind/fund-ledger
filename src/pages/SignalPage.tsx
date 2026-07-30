@@ -83,7 +83,7 @@ export default function SignalPage() {
   const signals = useMemo(() => {
     if (transactions.length === 0) return []
     return computeSignals(transactions, navCache, historyNavs)
-  }, [transactions, navCache])
+  }, [transactions, navCache, historyNavs])
 
   // Detect new signals vs last visit
   const newKeys = useMemo(() => {
