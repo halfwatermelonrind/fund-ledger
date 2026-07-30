@@ -187,8 +187,12 @@ export function computeSignals(
     // R_max: always use confirmed NAV for peak tracking (estimate is volatile)
     const confirmedRate = pos.totalProfitRate
     let rMax = getRMax(pos.fundCode)
-    if (rMax === 0 && historyNavs?.[pos.fundCode]) {
+    if (rMax === 0 && historyNavs?.[pos.fundCode] && historyNavs[pos.fundCode].length > 0) {
       rMax = seedRMaxFromHistory(pos.fundCode, pos, transactions, historyNavs[pos.fundCode])
+      console.log(`[signalEngine] ${pos.fundCode}: seeded rMax=${rMax.toFixed(2)}% ` +
+        `(historyNavs=${historyNavs[pos.fundCode].length} pts, ` +
+        `costPerShare=${(pos.totalCost/pos.totalShares).toFixed(4)}, ` +
+        `confirmedRate=${confirmedRate.toFixed(2)}%)`)
     }
     // Update R_max using confirmed rate to avoid estimate noise
     if (confirmedRate > rMax) {
