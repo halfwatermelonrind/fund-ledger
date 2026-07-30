@@ -194,6 +194,12 @@ export function computeSignals(
         `costPerShare=${(pos.totalCost/pos.totalShares).toFixed(4)}, ` +
         `confirmedRate=${confirmedRate.toFixed(2)}%)`)
     }
+    // Fallback: if still 0 (no history data), seed from current confirmed rate
+    if (rMax === 0 && confirmedRate > 0) {
+      rMax = Math.round(confirmedRate * 100) / 100
+      updateRMax(pos.fundCode, rMax)
+      console.log(`[signalEngine] ${pos.fundCode}: fallback rMax=${rMax.toFixed(2)}% from confirmedRate`)
+    }
     // Update R_max using confirmed rate to avoid estimate noise
     if (confirmedRate > rMax) {
       updateRMax(pos.fundCode, confirmedRate)
