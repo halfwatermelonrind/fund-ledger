@@ -175,18 +175,25 @@ export function computeSignals(
     if (pos.isCleared) continue
     if (pos.totalCost <= 0) continue
 
-    const rate = pos.totalProfitRate // current yield rate %
+    // Use intraday estimate for live signals, fall back to confirmed NAV
+    const refNav = pos.estimateNav ?? pos.latestNav
+    const intradayMarketValue = pos.totalShares * refNav
+    const intradayRate = pos.totalInvested > 0
+      ? ((intradayMarketValue - pos.totalCost + pos.realizedProfit + pos.dividendProfit) / pos.totalInvested) * 100
+      : 0
+    const rate = Math.round(intradayRate * 100) / 100
     const buildDays = getBuildDays(transactions, pos.fundCode)
 
-    // R_max: try stored value first, seed from history if available
+    // R_max: always use confirmed NAV for peak tracking (estimate is volatile)
+    const confirmedRate = pos.totalProfitRate
     let rMax = getRMax(pos.fundCode)
     if (rMax === 0 && historyNavs?.[pos.fundCode]) {
       rMax = seedRMaxFromHistory(pos.fundCode, pos, transactions, historyNavs[pos.fundCode])
     }
-    // Update and sync local variable
-    if (rate > rMax) {
-      updateRMax(pos.fundCode, rate)
-      rMax = rate
+    // Update R_max using confirmed rate to avoid estimate noise
+    if (confirmedRate > rMax) {
+      updateRMax(pos.fundCode, confirmedRate)
+      rMax = confirmedRate
     }
 
     let r5Triggered = false
