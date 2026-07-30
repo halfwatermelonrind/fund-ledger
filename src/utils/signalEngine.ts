@@ -308,9 +308,17 @@ function evaluateR1(pos: Position, rate: number, buildDays: number, buildDate: s
 }
 
 function evaluateR4(pos: Position, rate: number, rMax: number): Signal | null {
-  if (rMax <= R4_RMAX_MIN) return null
-  if (rate >= rMax * 0.5) return null
+  const halfMax = rMax * 0.5
+  if (rMax <= R4_RMAX_MIN) {
+    console.log(`[R4] ${pos.fundCode}: rMax=${rMax.toFixed(2)} <= ${R4_RMAX_MIN} → skip`)
+    return null
+  }
+  if (rate >= halfMax) {
+    console.log(`[R4] ${pos.fundCode}: rate=${rate.toFixed(2)} >= ${halfMax.toFixed(2)} (half of rMax=${rMax.toFixed(2)}) → skip`)
+    return null
+  }
 
+  console.log(`[R4] ${pos.fundCode}: TRIGGERED rMax=${rMax.toFixed(2)} rate=${rate.toFixed(2)} half=${halfMax.toFixed(2)}`)
   return {
     type: 'action', dir: 'reduce', rule: 'R4', prio: '高',
     fundCode: pos.fundCode, fundName: pos.fundName,
