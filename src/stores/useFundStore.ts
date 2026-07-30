@@ -278,6 +278,7 @@ export const useFundStore = create<FundStore>()(
                 updated.amount / nav * 100,
               ) / 100
             } else if (updated.type === 'sell' && updated.shares != null) {
+              updated.confirmedShares = updated.shares
               updated.amount = Math.round(
                 updated.shares * nav * (1 - updated.feeRate) * 100,
               ) / 100
