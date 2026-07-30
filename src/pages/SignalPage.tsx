@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react'
-import type { Transaction } from '../types'
+import type { Transaction, HistoryNavPoint } from '../types'
 import { useFundStore } from '../stores/useFundStore'
 import { useIsPC } from '../hooks/useMediaQuery'
 import { computeSignals } from '../utils/signalEngine'
+import { fetchHistoryNav } from '../services/fundData'
 import type { Signal } from '../utils/signalEngine'
 
 const BAR_CLS: Record<string, string> = {
@@ -49,6 +50,20 @@ export default function SignalPage() {
     return { transactions: t, navCache: c }
   }, [storeTransactions, storeNavCache])
 
+  // History NAVs for R_max seeding
+  const [historyNavs, setHistoryNavs] = useState<Record<string, HistoryNavPoint[]>>({})
+  useEffect(() => {
+    const codes = [...new Set(transactions.map((t) => t.fundCode))]
+    if (codes.length === 0) return
+    Promise.allSettled(codes.map((c) => fetchHistoryNav(c))).then((results) => {
+      const map: Record<string, HistoryNavPoint[]> = {}
+      results.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value.length > 0) map[codes[i]] = r.value
+      })
+      setHistoryNavs(map)
+    })
+  }, [transactions])
+
   // Background refresh
   const [refreshing, setRefreshing] = useState(false)
   useEffect(() => {
@@ -67,7 +82,7 @@ export default function SignalPage() {
 
   const signals = useMemo(() => {
     if (transactions.length === 0) return []
-    return computeSignals(transactions, navCache)
+    return computeSignals(transactions, navCache, historyNavs)
   }, [transactions, navCache])
 
   // Detect new signals vs last visit
