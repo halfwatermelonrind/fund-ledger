@@ -50,6 +50,14 @@ let lastBatchResult: Map<string, ValuationResult> | null = null
 export async function preFetchAndStore(codes: string[]): Promise<void> {
   l1Cache.clear()
   lastBatchResult = await fetchValuationBatch(codes)
+  // Debug: log how many funds got L1 estimates
+  if (lastBatchResult) {
+    let withEst = 0
+    lastBatchResult.forEach((v) => { if (v.estimate != null) withEst++ })
+    console.log(`[valuationEngine] preFetch done: ${withEst}/${lastBatchResult.size} funds have L1 estimates`)
+  } else {
+    console.warn('[valuationEngine] preFetch returned null!')
+  }
 }
 
 /** Read pre-fetched L1 estimate for a single code */
