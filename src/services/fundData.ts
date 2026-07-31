@@ -456,18 +456,47 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
   }
 
   // ---- Step 5: 缓存完全未命中，降级到 pingzhongdata ----
-  const fallback = await tryPingzhongFull(fundCode)
-  if (fallback) {
-    // Also try valuation
-    try {
-      const valuation = await fetchFundEstimate(fundCode)
-      if (valuation.estimate != null) {
-        fallback.estimate = valuation.estimate
-        fallback.change = valuation.change
-        fallback.time = valuation.time
-      }
-    } catch (_) { /* */ }
-    return fallback
+  try {
+    const fallback = await tryPingzhongFull(fundCode)
+    if (fallback) {
+      // Also try valuation
+      try {
+        const pre = getPreFetchedEstimate(fundCode)
+        if (pre && pre.estimate != null) {
+          fallback.estimate = pre.estimate
+          fallback.change = pre.change
+          fallback.time = pre.time || fallback.time
+        } else {
+          const resp = await fetch(
+            `https://fundcomapi.tiantianfunds.com/mm/newCore/FundValuationLast?FCODES=${fundCode}&FIELDS=FCODE,GSZ,GSZZL,GZTIME`,
+            { cache: 'no-store', signal: AbortSignal.timeout(12_000) }
+          )
+          if (resp.ok) {
+            const json = await resp.json()
+            const item = json?.data?.[0]
+            if (item && item.GSZ != null && item.GSZZL != null) {
+              fallback.estimate = item.GSZ
+              fallback.change = item.GSZZL
+              fallback.time = item.GZTIME || fallback.time
+            }
+          }
+        }
+      } catch (_) { /* */ }
+      return fallback
+    }
+  } catch (_) { /* pingzhongdata failed */ }
+
+  // Ultimate fallback: return whatever we can from preFetch
+  const pre = getPreFetchedEstimate(fundCode)
+  if (pre) {
+    return {
+      name: fundCode,
+      nav: 0,
+      date: '',
+      estimate: pre.estimate,
+      change: pre.change,
+      time: pre.time,
+    }
   }
 
   throw new Error(`无法获取基金 ${fundCode} 的数据`)
