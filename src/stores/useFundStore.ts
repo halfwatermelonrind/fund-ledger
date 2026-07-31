@@ -374,8 +374,10 @@ export const useFundStore = create<FundStore>()(
               const newCache = { ...state.navCache }
               for (const [code, val] of l2Results) {
                 if (newCache[code]) {
-                  // If L1 had no data or estimate was cleared, fill with L2
-                  if (newCache[code].estimate == null || newCache[code].estimate === 0) {
+                  // Overwrite if existing estimate is stale (not from today's refresh)
+                  const existingTime = newCache[code].time || ''
+                  const today = new Date().toISOString().slice(0, 10)
+                  if (!existingTime.startsWith(today)) {
                     newCache[code] = {
                       ...newCache[code],
                       estimate: val.estimate,
