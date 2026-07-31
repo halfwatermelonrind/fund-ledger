@@ -367,19 +367,21 @@ export const useFundStore = create<FundStore>()(
           }
           clearTimeout(safetyTimer)
 
-          // Background L2 (Sina) — only for funds still missing estimates after L1
+          // Background L2 (Sina) — fill in missing estimates
           supplementL2Estimates(codes).then((l2Results) => {
             if (l2Results.size === 0) return
             set((state) => {
               const newCache = { ...state.navCache }
               for (const [code, val] of l2Results) {
-                // Only fill in if L1 didn't provide an estimate (L1 > L2 accuracy)
-                if (newCache[code] && newCache[code].estimate == null) {
-                  newCache[code] = {
-                    ...newCache[code],
-                    estimate: val.estimate,
-                    change: val.change,
-                    time: val.time,
+                if (newCache[code]) {
+                  // If L1 had no data or estimate was cleared, fill with L2
+                  if (newCache[code].estimate == null || newCache[code].estimate === 0) {
+                    newCache[code] = {
+                      ...newCache[code],
+                      estimate: val.estimate,
+                      change: val.change,
+                      time: val.time,
+                    }
                   }
                 }
               }
