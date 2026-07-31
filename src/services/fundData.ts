@@ -385,25 +385,22 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
     } catch (_) { /* fall through */ }
   }
 
-  // ---- Step 2: 尝试从 FundGuZhi 缓存获取 ----
+  // ---- Step 2: 尝试从 FundGuZhi 缓存获取（非阻塞，快速检查）----
   let fromCache: FundNavData | null = null
-  try {
-    await loadFundGZCache()
-    const entry = fundGZCache?.get(fundCode)
-
+  // Only use cache if already loaded; don't block waiting for it
+  if (fundGZCache && !isCacheExpired()) {
+    const entry = fundGZCache.get(fundCode)
     if (entry && entry.name) {
       fromCache = {
         name: entry.name,
         nav: entry.nav,
         date: entry.date,
-        estimate: entry.estimate,
-        change: entry.change,
+        estimate: undefined,
+        change: undefined,
         navChange: entry.navChange,
         time: entry.time,
       }
     }
-  } catch (_cacheErr) {
-    console.warn(`[fundData] FundGuZhi cache unavailable`)
   }
 
   // ---- Step 3: 从 pingzhongdata 补充最新净值和涨跌幅 ----
