@@ -434,7 +434,7 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
       try {
         const resp = await fetch(
           `https://fundcomapi.tiantianfunds.com/mm/newCore/FundValuationLast?FCODES=${fundCode}&FIELDS=FCODE,GSZ,GSZZL,GZTIME`,
-          { cache: 'no-store', signal: AbortSignal.timeout(8_000) }
+          { cache: 'no-store', signal: AbortSignal.timeout(12_000) }
         )
         if (resp.ok) {
           const json = await resp.json()
@@ -446,6 +446,11 @@ export async function fetchLatestNav(fundCode: string): Promise<FundNavData> {
           }
         }
       } catch (_) { /* keep existing estimate if any */ }
+    }
+    // If still no estimate, clear it so L2 can fill in (don't keep stale data)
+    if (fromCache.estimate == null) {
+      fromCache.estimate = undefined
+      fromCache.change = undefined
     }
     return fromCache
   }
