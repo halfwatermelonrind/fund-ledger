@@ -516,18 +516,23 @@ export async function supplementL2Estimates(codes: string[]): Promise<Map<string
   const results = new Map<string, { estimate: number; change?: number; time: string }>()
   if (!isBrowser || codes.length === 0) return results
 
-  // Process serially to avoid JSONP callback conflicts (though each has unique callback name, serial is safer)
-  for (const code of codes) {
-    try {
-      const r = await fetchSinaEstimate(code)
-      if (r && r.estimate != null) {
-        results.set(code, {
-          estimate: r.estimate,
-          change: r.change,
-          time: r.time || new Date().toISOString().slice(0, 10),
-        })
+  // Process in parallel batches (each JSONP call has unique callback name, safe to parallelize)
+  for (let i = 0; i < codes.length; i += 3) {
+    const batch = codes.slice(i, i + 3)
+    const batchResults = await Promise.allSettled(
+      batch.map(async (code) => {
+        const r = await fetchSinaEstimate(code)
+        if (r && r.estimate != null) {
+          return { code, estimate: r.estimate, change: r.change, time: r.time || new Date().toISOString().slice(0, 10) }
+        }
+        return null
+      })
+    )
+    for (const r of batchResults) {
+      if (r.status === 'fulfilled' && r.value) {
+        results.set(r.value.code, { estimate: r.value.estimate, change: r.value.change, time: r.value.time })
       }
-    } catch (_) { /* skip */ }
+    }
   }
   return results
 }
